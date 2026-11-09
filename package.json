@@ -1,0 +1,12 @@
+{
+  "name": "oracle-tco-desktop",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "prepare-dist": "node scripts/prepare-dist.mjs",
+    "tauri": "tauri"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.0.0"
+  }
+}
