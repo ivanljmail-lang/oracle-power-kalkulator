@@ -1,6 +1,6 @@
 // Service worker: radi i bez interneta; nova verzija se preuzima u pozadini (stale-while-revalidate).
 // Kad menjate fajlove, povećajte VERSION da bi se stari keš obrisao.
-const VERSION = "v2";
+const VERSION = "v3";
 const CACHE = "oracle-tco-" + VERSION;
 const CORE = ["./", "./index.html", "./en/", "./en/index.html", "./manifest.webmanifest",
   "./icons/icon-192.png", "./icons/icon-512.png", "./icons/maskable-512.png"];

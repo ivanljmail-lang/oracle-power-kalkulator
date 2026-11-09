@@ -105,6 +105,7 @@ td.c,th.c{text-align:center}
 td input,td select{padding:4px 6px}
 td.in{padding:3px 4px}
 td.hint{color:var(--mut);font-size:12px;white-space:normal;font-family:var(--f-body);text-align:left;min-width:220px}
+tr.grp td{background:var(--line2);font:600 11.5px var(--f-body);letter-spacing:.04em;text-transform:uppercase;color:var(--mut);padding:5px 8px}
 tr.tot td{font-weight:600;background:var(--line2);border-top:2px solid var(--line)}
 tr.selrow td{background:var(--sel)}
 tr.marked td{background:var(--badbg)}
@@ -205,7 +206,7 @@ svg text{fill:var(--mut);font:11px var(--f-body)}
           <tbody id="optsBody"></tbody>
         </table></div>
         <div class="inline-k" id="netPrices"></div>
-        <p class="note">Prices are indicative. Verify against the current Oracle Technology Global Price List.</p>
+        <p class="note">Prices: Oracle Technology Global Price List (USD), September 15, 2026, per processor license. Support per the price list = 22% of the license. GoldenGate is licensed on the processors of the source and target databases; Key Vault (USD 100,000 per server) is not included because it is not licensed per processor.</p>
       </div>
     </div>
   </section>
@@ -341,8 +342,7 @@ const PASSIVE="Passive failover (10 days)";
 
 const DEF={
   ee:47500,eeD:0,se2:17500,se2D:0,sup:22,rez:20,cfx:0.5,cfp:1,model:"nova",lpm:false,target:40,indep:false,
-  opts:[["Real Application Clusters (RAC)",23000,false,0],["Partitioning",11500,true,0],["Diagnostics Pack",7500,true,0],["Tuning Pack",5000,true,0],
-        ["Active Data Guard",11500,false,0],["Advanced Security",15000,false,0],["Advanced Compression",11500,false,0],["Multitenant",17500,false,0],["Database In-Memory",23000,false,0]],
+  opts:[["Multitenant",17500,false,0,0],["Real Application Clusters (RAC)",23000,false,0,0],["RAC One Node",10000,false,0,0],["Active Data Guard",11500,false,0,0],["Partitioning",11500,true,0,0],["Real Application Testing",11500,false,0,0],["Advanced Compression",11500,false,0,0],["Advanced Security",15000,false,0,0],["Label Security",11500,false,0,0],["Database Vault",11500,false,0,0],["TimesTen Application-Tier Database Cache",23000,false,0,0],["Database In-Memory",23000,false,0,0],["Diagnostics Pack",7500,true,0,1],["Tuning Pack",5000,true,0,1],["Database Lifecycle Management Pack",12000,false,0,1],["Data Masking and Subsetting Pack",11500,false,0,1],["Cloud Management Pack for Oracle Database",7500,false,0,1],["Database Security Central",11500,false,0,2],["GoldenGate",17500,false,0,2]],
   groups:[
     {name:"Prod cluster",hosts:4,proc:"Intel Xeon Gold 6548Y+ (5th gen)",sockets:2,cores:"",virt:"VMware vSphere",role:"Active",ed:"EE",util:40},
     {name:"DR",hosts:2,proc:"Intel Xeon Gold 6548Y+ (5th gen)",sockets:2,cores:"",virt:"VMware vSphere",role:"DR (Data Guard)",ed:"EE",util:40},
@@ -366,6 +366,7 @@ const KEY="oracle-power-x86-en-v1";
 const clone=o=>JSON.parse(JSON.stringify(o));
 let st=clone(DEF);
 try{const s=localStorage.getItem(KEY);if(s){const o=JSON.parse(s);if(o&&o.groups&&o.scen&&o.p&&o.x&&o.pw&&o.nx){st=Object.assign(clone(DEF),o);["p","x","pw","nx"].forEach(k=>st[k]=Object.assign(clone(DEF[k]),o[k]));}}}catch(e){}
+if(Array.isArray(st.opts)&&st.opts!==DEF.opts){const prev={};st.opts.forEach(o=>{if(o&&o[0])prev[o[0]]=o});const alias={"Real Application Clusters":"Real Application Clusters (RAC)"};st.opts=clone(DEF.opts).map(o=>{const q=prev[o[0]]||Object.keys(alias).filter(k=>alias[k]===o[0]).map(k=>prev[k])[0];if(q){o[2]=!!q[2];o[3]=q[3]||0;}return o});}
 function save(){try{localStorage.setItem(KEY,JSON.stringify(st));}catch(e){}}
 const marked=new Set();
 
@@ -399,9 +400,10 @@ function renderStatic(){
     `<label class="f">License model<select data-k="model" id="f_model"><option value="nova"${st.model==="nova"?" selected":""}>New license purchase</option><option value="post"${st.model==="post"?" selected":""}>Customer already owns x86 licenses</option></select><span class="h">Existing: only the difference is purchased</span></label>`;
   $("lpm").checked=!!st.lpm;
   $("target").value=st.target;
-  $("optsBody").innerHTML=st.opts.map((o,i)=>`<tr>
-    <td class="c"><input type="checkbox" data-k="opts.${i}.2" id="o_c${i}" ${o[2]?"checked":""} aria-label="Use ${esc(o[0])}"></td>
-    <td class="t">${esc(o[0])}</td>
+  const GRP=["Enterprise Edition options", "Management packs (Database Enterprise Management)", "Related products"];
+  $("optsBody").innerHTML=st.opts.map((o,i)=>(i===0||st.opts[i-1][4]!==o[4]?`<tr class="grp"><td colspan="5" class="t">${GRP[o[4]||0]}</td></tr>`:"")+`<tr>
+    <td class="c"><input type="checkbox" data-k="opts.${i}.2" id="o_c${i}" ${o[2]?"checked":""} aria-label="${esc(o[0])}"></td>
+    <td class="t" style="white-space:normal">${esc(o[0])}</td>
     <td class="in"><input type="number" step="500" min="0" data-k="opts.${i}.1" id="o_p${i}" value="${o[1]}" style="width:100px"></td>
     <td class="in"><input type="number" step="1" min="0" max="100" data-k="opts.${i}.3" id="o_d${i}" value="${o[3]}" style="width:66px"></td>
     <td id="o_n${i}"></td></tr>`).join("");
