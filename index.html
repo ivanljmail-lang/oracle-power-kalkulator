@@ -1,0 +1,714 @@
+<!doctype html>
+<html lang="sr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Oracle Power vs x86 kalkulator</title>
+<meta name="description" content="Oracle licenciranje i TCO: IBM Power vs x86">
+<meta name="theme-color" content="#1b2a3a">
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png">
+<link rel="apple-touch-icon" href="./icons/icon-192.png">
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}[hidden]{display:none!important}.lang{font:500 13px var(--f-body);color:var(--fg);text-decoration:none;border:1px solid var(--line);border-radius:6px;padding:6px 12px;background:var(--panel)}.lang:hover{border-color:var(--mut)}.topbtns{display:flex;gap:8px;flex-wrap:wrap}</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@600;700&display=swap">
+<style>
+/* Layout: radni list u koracima 1–7; koraci 1–4 = trenutno okruženje (svetla pozadina), koraci 5–7 = novo okruženje (obojena pozadina); sažetak zalepljen na vrhu */
+:root{
+  --bg:#f6f7f9; --panel:#ffffff; --fg:#16191d; --mut:#5d6570; --line:#dde1e6; --line2:#eef0f3;
+  --in:#fff8dc; --inl:#e8d9a0; --power:#0b5cad; --powerbg:#e6effa; --x86:#b4521e; --x86bg:#fbeee6;
+  --good:#1d7a4f; --goodbg:#e3f3ea; --warn:#8a5a00; --warnbg:#fff1d1; --bad:#b42318; --badbg:#fdeceb;
+  --head:#1b2a3a; --headfg:#ffffff; --sel:#fff4c2;
+  --new:#e9f1f6; --newpanel:#f7fbfd; --newline:#b9d3e3; --newhead:#14506e; --newfg:#0f3d55;
+  --f-body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+  --f-disp:"IBM Plex Sans Condensed","IBM Plex Sans",system-ui,Arial,sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,"SFMono-Regular",Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#121417; --panel:#1a1d21; --fg:#e8eaed; --mut:#9aa3ad; --line:#2e333a; --line2:#23272d;
+  --in:#2f2a17; --inl:#5b4f25; --power:#6fa8e8; --powerbg:#16273a; --x86:#e99a6e; --x86bg:#33221a;
+  --good:#5cc994; --goodbg:#15301f; --warn:#f0c46a; --warnbg:#33290f; --bad:#f2877d; --badbg:#3a1a18;
+  --head:#2a3644; --headfg:#f1f3f5; --sel:#3a3416;
+  --new:#10202a; --newpanel:#15262f; --newline:#2a4a5c; --newhead:#1f5c7c; --newfg:#9fd0ea; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#121417; --panel:#1a1d21; --fg:#e8eaed; --mut:#9aa3ad; --line:#2e333a; --line2:#23272d;
+  --in:#2f2a17; --inl:#5b4f25; --power:#6fa8e8; --powerbg:#16273a; --x86:#e99a6e; --x86bg:#33221a;
+  --good:#5cc994; --goodbg:#15301f; --warn:#f0c46a; --warnbg:#33290f; --bad:#f2877d; --badbg:#3a1a18;
+  --head:#2a3644; --headfg:#f1f3f5; --sel:#3a3416;
+  --new:#10202a; --newpanel:#15262f; --newline:#2a4a5c; --newhead:#1f5c7c; --newfg:#9fd0ea; color-scheme:dark}
+*,*::before,*::after{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font:14px/1.5 var(--f-body)}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+.wrap{max-width:1320px;margin:0 auto;padding-block:20px 48px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+h1{font:700 26px/1.15 var(--f-disp);margin:0;text-wrap:balance;letter-spacing:-.01em}
+.sub{color:var(--mut);margin:6px 0 0;max-width:80ch}
+.top{display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px;align-items:flex-end;margin-bottom:14px}
+.btn{font:500 13px var(--f-body);color:var(--fg);background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:6px 12px;cursor:pointer}
+.btn:hover{border-color:var(--mut)}.btn:disabled{opacity:.45;cursor:default}
+.btn:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visible{outline:2px solid var(--power);outline-offset:1px}
+.btn.danger{color:var(--bad)}
+.sum{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);padding:8px 0 10px;border-bottom:1px solid var(--line);margin-bottom:16px}
+.kgroups{display:grid;grid-template-columns:minmax(0,3fr) minmax(0,5fr);gap:10px}
+@media (max-width:900px){.kgroups{grid-template-columns:minmax(0,1fr)}}
+.kg{border-radius:8px;padding:6px 8px 8px;border:1px solid var(--line);background:var(--panel)}
+.kg.new{background:var(--new);border-color:var(--newline)}
+.kg>small{display:block;font:600 11px var(--f-body);letter-spacing:.05em;text-transform:uppercase;color:var(--mut);margin:0 2px 4px}
+.kg.new>small{color:var(--newfg)}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(118px,1fr));gap:6px}
+.kpi{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:6px 10px;min-width:0}
+.kpi small{display:block;color:var(--mut);font-size:11.5px}
+.kpi b{font:600 17px/1.25 var(--f-mono);font-variant-numeric:tabular-nums;display:block;overflow-wrap:anywhere}
+.kpi .vs{font:400 11.5px var(--f-mono);color:var(--mut)}
+.kpi.p b{color:var(--power)}.kpi.x b{color:var(--x86)}.kpi b.pos{color:var(--good)}.kpi b.neg{color:var(--bad)}
+.scenline{font-size:12.5px;color:var(--mut);margin-top:6px}.scenline strong{color:var(--fg)}
+@media (max-width:700px){.sum{position:static}}
+section.step{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px 18px 18px;margin-bottom:16px;min-width:0}
+.newzone{background:var(--new);border:1px solid var(--newline);border-radius:14px;padding:14px;margin-top:8px}
+.newzone section.step{background:var(--newpanel);border-color:var(--newline)}
+.newzone .num{background:var(--newhead)}
+.zonehead{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:baseline;margin:2px 4px 14px}
+.zonehead b{font:700 15px var(--f-disp);color:var(--newfg);letter-spacing:.02em;text-transform:uppercase}
+.modebox{border:1px dashed var(--newline);border-radius:8px;padding:8px 12px;margin:4px 0 12px;background:var(--panel)}
+.zonehead span{font-size:13px;color:var(--mut);max-width:90ch}
+.zonelabel{font:600 11px var(--f-body);letter-spacing:.05em;text-transform:uppercase;color:var(--mut);margin:0 4px 8px}
+.sh{display:flex;gap:12px;align-items:baseline;margin-bottom:6px}
+.num{font:700 13px var(--f-mono);color:var(--headfg);background:var(--head);border-radius:4px;padding:1px 7px;flex:none}
+h2{font:700 17px/1.3 var(--f-disp);margin:0;text-wrap:balance}
+h3{font:600 13px var(--f-body);margin:16px 0 6px;color:var(--mut);text-transform:uppercase;letter-spacing:.05em}
+h3.p{color:var(--power)}h3.x{color:var(--x86)}
+.lead{color:var(--mut);font-size:13px;margin:0 0 12px;max-width:95ch}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px 14px}
+.two{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:18px}
+.half{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:18px}
+@media (max-width:900px){.two,.half{grid-template-columns:minmax(0,1fr)}}
+.cfg{border:1px solid var(--line);border-radius:8px;padding:10px 12px 12px;background:var(--panel);min-width:0}
+.cfg.p{border-top:3px solid var(--power)}.cfg.x{border-top:3px solid var(--x86)}
+.cfg h3{margin-top:0}
+label.f{display:flex;flex-direction:column;gap:3px;font-size:12px;color:var(--mut);min-width:0}
+label.f span.h{font-size:11px;color:var(--mut);opacity:.9}
+.info{font-size:11.5px;color:var(--mut);background:var(--line2);border-radius:5px;padding:5px 8px;line-height:1.4}
+.info b{color:var(--fg)}
+input,select{font:400 13.5px var(--f-body);color:var(--fg);background:var(--in);border:1px solid var(--inl);border-radius:5px;padding:5px 7px;width:100%;min-width:0}
+input[readonly]{background:var(--line2);border-color:var(--line);color:var(--fg);cursor:default}
+input[type=number]{font-family:var(--f-mono);font-variant-numeric:tabular-nums;text-align:right}
+input[type=checkbox],input[type=radio]{width:16px;height:16px;accent-color:var(--power);margin:0}
+label.chk{display:flex;gap:8px;align-items:flex-start;font-size:13px;color:var(--fg);cursor:pointer}
+label.chk input{margin-top:3px;flex:none}
+.tw{overflow-x:auto;border:1px solid var(--line);border-radius:8px;background:var(--panel)}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{padding:6px 8px;border-bottom:1px solid var(--line2);text-align:right;vertical-align:middle;white-space:nowrap}
+th{background:var(--head);color:var(--headfg);font-weight:600;font-size:11.5px;letter-spacing:.02em;white-space:normal;line-height:1.3;vertical-align:bottom}
+th.p{background:var(--power);color:#fff}th.x{background:var(--x86);color:#fff}
+td{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+td.t,th.t{text-align:left;font-family:var(--f-body)}
+td.c,th.c{text-align:center}
+td input,td select{padding:4px 6px}
+td.in{padding:3px 4px}
+td.hint{color:var(--mut);font-size:12px;white-space:normal;font-family:var(--f-body);text-align:left;min-width:220px}
+tr.tot td{font-weight:600;background:var(--line2);border-top:2px solid var(--line)}
+tr.selrow td{background:var(--sel)}
+tr.marked td{background:var(--badbg)}
+tr.extra td{color:var(--warn);font-style:italic}
+td.pos{color:var(--good);font-weight:600}td.neg{color:var(--bad);font-weight:600}
+.chip{display:inline-block;font:600 10.5px var(--f-body);letter-spacing:.03em;padding:1px 6px;border-radius:10px;margin-right:6px;vertical-align:1px}
+.chip.ibm{background:var(--powerbg);color:var(--power)}.chip.cmp{background:var(--x86bg);color:var(--x86)}.chip.poc{background:var(--goodbg);color:var(--good)}
+.bar{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;align-items:center}
+.msgs{display:flex;flex-direction:column;gap:6px;margin-top:10px}
+.msg{border-radius:6px;padding:7px 10px;font-size:12.5px;max-width:110ch}
+.msg.warn{background:var(--warnbg);color:var(--warn)}.msg.bad{background:var(--badbg);color:var(--bad)}.msg.info{background:var(--line2);color:var(--mut)}
+.note{font-size:12.5px;color:var(--mut);margin:8px 0 0;max-width:110ch}
+.legend{display:flex;flex-wrap:wrap;gap:14px;font-size:12px;color:var(--mut);margin-top:8px}
+.sw{display:inline-block;width:12px;height:12px;border-radius:2px;vertical-align:-1px;margin-right:5px;border:1px solid var(--inl)}
+details.guide{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 18px;margin-bottom:16px}
+details.guide summary{cursor:pointer;font:600 14px var(--f-body);padding:4px 0}
+details.guide ol{margin:6px 0 10px;padding-left:20px;max-width:100ch}
+details.guide li{margin:3px 0}
+.rules{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:10px;margin:8px 0}
+.rule{border-left:3px solid var(--line);padding:2px 10px;font-size:13px}
+.rule b{display:block;font-size:12.5px}
+.rule.p{border-color:var(--power)}.rule.x{border-color:var(--x86)}
+.disc{background:var(--warnbg);color:var(--warn);border-radius:8px;padding:9px 12px;font-size:12.5px;margin-bottom:16px}
+.pill{display:inline-block;padding:1px 8px;border-radius:10px;font:600 12px var(--f-body)}
+.pill.ok{background:var(--goodbg);color:var(--good)}.pill.no{background:var(--badbg);color:var(--bad)}
+svg text{fill:var(--mut);font:11px var(--f-body)}
+.inline-k{display:flex;flex-wrap:wrap;gap:6px 20px;margin-top:10px;font-size:13px}
+.inline-k span{color:var(--mut)}.inline-k b{font-family:var(--f-mono);font-weight:600;color:var(--fg)}
+</style>
+
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <div>
+      <h1>Oracle licenciranje i TCO: IBM Power vs x86</h1>
+      <p class="sub">Koraci 1–4 opisuju trenutno x86 okruženje korisnika i njegovo poređenje sa Power-om. Koraci 5–7 porede potpuno novo x86 okruženje sa novim IBM Power okruženjem. Svi delovi računaju iz istih unosa.</p>
+    </div>
+    <div class="topbtns"><a class="lang" href="./en/" hreflang="en">English</a><button class="btn danger" id="reset" type="button">Vrati primer vrednosti</button></div>
+  </div>
+
+  <div class="sum" aria-live="polite">
+    <div class="kgroups">
+      <div class="kg"><small>Licence: trenutno x86 vs Power</small><div class="kpis" id="kpiA"></div></div>
+      <div class="kg new"><small>Novo okruženje: novo x86 vs novi Power</small><div class="kpis" id="kpiB"></div></div>
+    </div>
+    <div class="scenline" id="scenline"></div>
+  </div>
+
+  <details class="guide" id="guide" open>
+    <summary>Uputstvo: kako se koristi kalkulator</summary>
+    <ol>
+      <li><b>Oracle ulazi</b>: liste cena, poseban popust za EE, SE2 i svaku opciju, support, model licenci.</li>
+      <li><b>Trenutno okruženje</b>: jedan red je grupa istih servera (Prod, DR, Test…). Unesite <i>sve hostove u klasteru</i> na kojima Oracle VM može da radi. Grupe za brisanje označite kvačicom i kliknite „Obriši označene“.</li>
+      <li><b>Benchmark</b>: izaberite scenario (odnos performansi po jezgru). Osetljivost i ciljana ušteda pokazuju koji odnos je potreban.</li>
+      <li><b>Poređenje</b>: trenutno x86 stanje naspram Power-a po grupama.</li>
+      <li><b>Novo okruženje</b> (obojena pozadina): konfiguracija novih x86 i novih Power servera. Podrazumevano novo okruženje <i>prati trenutno</i>: veličina se računa iz koraka 2 i izabranog scenarija iz koraka 3. Ako uključite kvačicu „Novo okruženje nezavisno od trenutnog“, porede se samo dve konfiguracije koje unesete u koraku 5, bez veze sa koracima 2–4 (npr. novi projekat ili gotove ponude za oba sistema).</li>
+      <li><b>Infrastruktura i TCO</b> novog x86 i novog Power okruženja.</li>
+      <li><b>TCO po godinama</b> i godina kada Power postaje jeftiniji. Sažetak je stalno na vrhu.</li>
+    </ol>
+    <div class="legend"><span><i class="sw" style="background:var(--in)"></i>polje za unos</span><span><i class="sw" style="background:var(--power);border-color:var(--power)"></i>IBM Power</span><span><i class="sw" style="background:var(--x86);border-color:var(--x86)"></i>x86</span><span><i class="sw" style="background:var(--new);border-color:var(--newline)"></i>novo okruženje (koraci 5–7)</span></div>
+    <h3>Pravila licenciranja koja prave razliku</h3>
+    <div class="rules">
+      <div class="rule"><b>Core factor</b>x86 Intel/AMD = 0,5; IBM Power10 = 1,0. Power11 proveriti u važećoj Oracle Processor Core Factor Table.</div>
+      <div class="rule x"><b>x86: soft partitioning</b>VMware, Hyper-V i KVM nisu granica licenciranja. Licenciraju se sva jezgra svih hostova u klasteru na kojima Oracle VM može da radi.</div>
+      <div class="rule p"><b>Power: hard partitioning</b>PowerVM LPAR (dedicated/capped) je priznat. Kalkulator licencira aktivna jezgra Power servera namenjena Oracle-u: aktivna jezgra po serveru minus jezgra za ne-Oracle LPAR-ove.</div>
+      <div class="rule p"><b>Live Partition Mobility</b>Sa uključenim LPM Oracle traži licence za sva aktivna jezgra izvornog i ciljnog servera. Kalkulator tada licencira sva aktivna jezgra svih Power servera.</div>
+      <div class="rule"><b>Prag rentabilnosti</b>Zbog faktora 1,0 naspram 0,5, Power mora imati više od 2× bolje performanse po jezgru da bi licence po jezgru bile jeftinije.</div>
+      <div class="rule"><b>Korišćena jezgra</b>Postojeći x86 se licencira na sva jezgra hosta, a nova okruženja se dimenzionišu prema vršnoj potrošnji plus rezerva za rast.</div>
+      <div class="rule"><b>Pasivni failover i DR</b>Server samo za failover može do 10 dana godišnje bez licence. DR sa Data Guard-om i Test/Dev se licenciraju.</div>
+      <div class="rule"><b>Standard Edition 2</b>Licencira se po soketu (maks. 2 soketa); za SE2 Power ne donosi uštedu na licencama.</div>
+      <div class="rule"><b>Postojeće licence</b>Ukidanje supporta na delu licenci podleže Oracle pravilima o repricing-u. Proveriti pre ponude.</div>
+    </div>
+  </details>
+
+  <div class="disc">Svi brojevi, faktori licenciranja i odnosi performansi su procene i vendor/benchmark tvrdnje za sales pripremu. Pre obavezujuće ponude potvrditi PoC-om i pismeno kod Oracle-a i IBM-a za konkretnu konfiguraciju.</div>
+
+  <div class="zonelabel">Trenutno okruženje korisnika</div>
+
+  <section class="step" id="s1">
+    <div class="sh"><span class="num">1</span><h2>Oracle ulazi</h2></div>
+    <div class="two">
+      <div>
+        <h3 style="margin-top:0">Licence baze</h3>
+        <div class="tw"><table>
+          <thead><tr><th class="t">Stavka</th><th>Lista (USD)</th><th>Popust (%)</th><th>Neto (USD)</th></tr></thead>
+          <tbody id="baseBody"></tbody>
+        </table></div>
+        <div class="grid" id="oracleIn" style="margin-top:12px"></div>
+        <div class="grid" style="margin-top:12px">
+          <label class="chk"><input type="checkbox" id="lpm" data-k="lpm"> <span>Live Partition Mobility (LPM) na Power-u<br><small style="color:var(--mut)">licenciraju se sva aktivna jezgra svih Power servera</small></span></label>
+        </div>
+      </div>
+      <div>
+        <h3 style="margin-top:0">EE opcije (po procesorskoj licenci)</h3>
+        <div class="tw"><table>
+          <thead><tr><th class="c">Koristi</th><th class="t">Opcija</th><th>Lista (USD)</th><th>Popust (%)</th><th>Neto (USD)</th></tr></thead>
+          <tbody id="optsBody"></tbody>
+        </table></div>
+        <div class="inline-k" id="netPrices"></div>
+        <p class="note">Cene su orijentacione. Proveriti važeći Oracle Technology Global Price List.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="step" id="s2">
+    <div class="sh"><span class="num">2</span><h2>Trenutno x86 okruženje korisnika</h2></div>
+    <p class="lead">Jedan red je grupa istih servera. Redovi su primer — zamenite ih podacima korisnika. Tabela je široka: skrolujte levo-desno; kvačica za brisanje i broj hostova su na levoj strani.</p>
+    <div class="rules" style="margin:0 0 12px">
+      <div class="rule x"><b>Licencirana jezgra = hostovi × soketi × jezgra</b>Npr. 4 hosta × 2 soketa × 32 jezgra = 256. Kod VMware-a Oracle traži licence za sve hostove u klasteru, zato se unosi ukupan broj hostova. Licence = 256 × 0,5 = 128.</div>
+      <div class="rule"><b>Vršna CPU (%)</b>Najveće opterećenje procesora na tim hostovima u periodu najvećeg rada (iz vROps-a, AWR-a ili monitoringa; najbolje 95. percentil). Ne menja trenutne x86 licence, nego određuje veličinu novog Power i novog x86 okruženja. Prazno = 100%.</div>
+      <div class="rule p"><b>Korišćena jezgra = licencirana × vršna CPU % × (1 + rezerva)</b>Npr. 256 × 40% × 1,2 = 123. Ovaj broj ide u benchmark: 123 ÷ 3,5 = 36 Power jezgara. Rezerva za rast se podešava u koraku 1.</div>
+    </div>
+    <div class="tw"><table>
+      <thead><tr>
+        <th class="c"><input type="checkbox" id="delAll" aria-label="Označi sve grupe"></th>
+        <th class="t">Naziv grupe</th><th>Broj hostova u klasteru</th><th class="t">Procesor</th><th>Soketa po serveru</th><th>Jezgara po soketu</th>
+        <th class="t">Virtualizacija</th><th class="t">Uloga</th><th class="t">Edicija</th><th>Vršna CPU (%)</th>
+        <th class="x">Licencirana jezgra</th><th class="x">Korišćena jezgra (+rezerva)</th><th class="x">Oracle licence</th><th class="x">Oracle trošak (neto USD)</th>
+      </tr></thead>
+      <tbody id="grpBody"></tbody>
+    </table></div>
+    <div class="bar">
+      <button class="btn" type="button" id="addGrp">+ Dodaj grupu servera</button>
+      <button class="btn danger" type="button" id="delGrp" disabled>Obriši označene</button>
+    </div>
+    <div class="msgs" id="grpMsgs"></div>
+  </section>
+
+  <section class="step" id="s3">
+    <div class="sh"><span class="num">3</span><h2>Benchmark scenariji primenjeni na trenutno okruženje</h2></div>
+    <p class="lead">Odnos = koliko x86 jezgara zamenjuje jedno Power jezgro za isti workload. Primenjuje se na korišćena jezgra iz koraka 2. Izabrani scenario određuje veličinu Power okruženja u koracima 4–7.</p>
+    <div class="tw"><table>
+      <thead><tr><th class="c">Izaberi</th><th class="t">Scenario / izvor</th><th>Odnos (1 Power = X x86)</th><th class="p">Potrebna Power jezgra</th><th class="p">Power licence</th><th class="p">Power Oracle trošak (USD)</th><th>Ušteda vs trenutno x86</th></tr></thead>
+      <tbody id="scBody"></tbody>
+    </table></div>
+    <p class="note">Nijedan izvor nije neutralan: In&amp;Out (2016) su sufinansirali HPE/Intel/Red Hat, Prowess (2022) je naručio Intel, a ostalo su IBM tvrdnje. Za Power11 nema nezavisnih merenja. Odnos potvrditi PoC-om na sistemu korisnika.</p>
+    <div class="two" style="margin-top:14px">
+      <div>
+        <h3>Osetljivost: ušteda na licencama po odnosu</h3>
+        <div class="tw"><table><thead id="sensHead"></thead><tbody id="sensBody"></tbody></table></div>
+      </div>
+      <div>
+        <h3>Ciljana ušteda</h3>
+        <div class="grid">
+          <label class="f">Ciljana ušteda na Oracle licencama (%)<input type="number" id="target" data-k="target" step="1" min="0" max="95"></label>
+          <div class="kpi"><small>Potreban odnos performansi</small><b id="reqRatio">–</b></div>
+        </div>
+        <p class="note">Računa se na trenutnom okruženju iz koraka 2, sa zaokruživanjem po grupama i LPM pravilom.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="step" id="s4">
+    <div class="sh"><span class="num">4</span><h2>Poređenje: trenutno x86 stanje naspram Power-a</h2></div>
+    <div class="tw"><table>
+      <thead><tr><th class="t">Grupa</th><th class="t">Uloga</th><th class="x">x86 licencirana jezgra</th><th class="x">x86 korišćena jezgra</th><th class="x">x86 licence</th><th class="x">x86 Oracle trošak</th><th class="p">Power jezgra (LPAR)</th><th class="p">Power licence</th><th class="p">Power Oracle trošak</th><th>Razlika x86 − Power (USD)</th></tr></thead>
+      <tbody id="cmpBody"></tbody>
+    </table></div>
+    <div class="msgs" id="cmpMsgs"></div>
+  </section>
+
+  <div class="newzone">
+    <div class="zonehead"><b>Novo okruženje</b><span id="zoneText"></span></div>
+
+    <section class="step" id="s5">
+      <div class="sh"><span class="num">5</span><h2>Konfiguracija novih servera</h2></div>
+      <div class="modebox">
+        <label class="chk"><input type="checkbox" id="indep" data-k="indep"> <span><b>Novo okruženje nezavisno od trenutnog</b></span></label>
+        <p class="note" id="modeText" style="margin:4px 0 0 24px"></p>
+      </div>
+      <div class="half">
+        <div class="cfg x">
+          <h3 class="x">Novo x86 okruženje</h3>
+          <div class="grid" id="nxIn"></div>
+          <div class="inline-k" id="nxOut"></div>
+        </div>
+        <div class="cfg p">
+          <h3 class="p">Novo IBM Power okruženje</h3>
+          <div class="grid" id="pwIn"></div>
+          <div class="inline-k" id="pwOut"></div>
+        </div>
+      </div>
+      <div class="msgs" id="cfgMsgs"></div>
+    </section>
+
+    <section class="step" id="s6">
+      <div class="sh"><span class="num">6</span><h2>Infrastruktura i TCO</h2></div>
+      <div class="grid" id="genIn"></div>
+      <h3>Troškovi po platformi</h3>
+      <div class="tw"><table>
+        <thead><tr><th class="t">Stavka</th><th class="p">Novi IBM Power</th><th class="x">Novi x86</th><th class="t">Jedinica / objašnjenje</th></tr></thead>
+        <tbody id="platBody"></tbody>
+      </table></div>
+      <h3>Rezultat za izabrani period</h3>
+      <div class="tw"><table>
+        <thead><tr><th class="t">Stavka</th><th class="p">Novi IBM Power</th><th class="x">Novi x86</th><th class="t">Logika</th></tr></thead>
+        <tbody id="resBody"></tbody>
+      </table></div>
+    </section>
+
+    <section class="step" id="s7" style="margin-bottom:0">
+      <div class="sh"><span class="num">7</span><h2>TCO po godinama</h2></div>
+      <div class="two">
+        <div class="tw"><table>
+          <thead><tr><th>Godina</th><th class="p">Power godišnje</th><th class="x">x86 godišnje</th><th class="p">Power kumulativno</th><th class="x">x86 kumulativno</th><th>Kumulativna ušteda</th></tr></thead>
+          <tbody id="yrBody"></tbody>
+        </table></div>
+        <div><div id="chart"></div><p class="note" id="beNote"></p></div>
+      </div>
+    </section>
+  </div>
+</div>
+
+<script>
+(function(){
+"use strict";
+const X86=[
+  ["Intel Xeon Gold 6248R (2. gen)",24],["Intel Xeon Gold 6338 (3. gen)",32],["Intel Xeon Gold 6430 (4. gen)",32],
+  ["Intel Xeon Platinum 8480+ (4. gen)",56],["Intel Xeon Gold 6544Y (5. gen)",16],["Intel Xeon Gold 6542Y (5. gen)",24],
+  ["Intel Xeon Gold 6548Y+ (5. gen)",32],["Intel Xeon Platinum 8562Y+ (5. gen)",32],["Intel Xeon Platinum 8568Y+ (5. gen)",48],
+  ["Intel Xeon Platinum 8580 (5. gen)",60],["Intel Xeon Platinum 8592+ (5. gen)",64],["Intel Xeon 6730P (6. gen)",32],
+  ["Intel Xeon 6747P (6. gen)",48],["Intel Xeon 6767P (6. gen)",64],["Intel Xeon 6787P (6. gen)",86],["Intel Xeon 6972P (6. gen)",96],
+  ["Intel Xeon 6980P (6. gen)",128],["AMD EPYC 9354 (Genoa)",32],["AMD EPYC 9554 (Genoa)",64],["AMD EPYC 9355 (Turin)",32],
+  ["AMD EPYC 9555 (Turin)",64],["AMD EPYC 9655 (Turin)",96],["Drugo (unesite jezgra)",0]];
+const PWR=[
+  ["Power11 · 30 jezgara/socket",30],["Power11 · 24 jezgra/socket",24],["Power11 · 16 jezgara/socket",16],
+  ["Power11 · 12 jezgara/socket",12],["Power11 · 10 jezgara/socket",10],["Power10 E1080 · 15 jezgara/socket",15],
+  ["Power10 E1080 · 12 jezgara/socket",12],["Power10 E1050 · 24 jezgra/socket",24],["Power10 E1050 · 18 jezgara/socket",18],
+  ["Power10 E1050 · 12 jezgara/socket",12],["Drugo (unesite jezgra)",0]];
+const VIRT=["VMware vSphere","Hyper-V","KVM / Nutanix AHV","Fizički (bez virtualizacije)"];
+const ROLE=["Aktivno","DR (Data Guard)","Test / Dev","Pasivni failover (10 dana)"];
+const PASSIVE="Pasivni failover (10 dana)";
+
+const DEF={
+  ee:47500,eeD:0,se2:17500,se2D:0,sup:22,rez:20,cfx:0.5,cfp:1,model:"nova",lpm:false,target:40,indep:false,
+  opts:[["Real Application Clusters (RAC)",23000,false,0],["Partitioning",11500,true,0],["Diagnostics Pack",7500,true,0],["Tuning Pack",5000,true,0],
+        ["Active Data Guard",11500,false,0],["Advanced Security",15000,false,0],["Advanced Compression",11500,false,0],["Multitenant",17500,false,0],["Database In-Memory",23000,false,0]],
+  groups:[
+    {name:"Prod klaster",hosts:4,proc:"Intel Xeon Gold 6548Y+ (5. gen)",sockets:2,cores:"",virt:"VMware vSphere",role:"Aktivno",ed:"EE",util:40},
+    {name:"DR",hosts:2,proc:"Intel Xeon Gold 6548Y+ (5. gen)",sockets:2,cores:"",virt:"VMware vSphere",role:"DR (Data Guard)",ed:"EE",util:40},
+    {name:"Test / Dev",hosts:2,proc:"Intel Xeon Gold 6430 (4. gen)",sockets:2,cores:"",virt:"VMware vSphere",role:"Test / Dev",ed:"EE",util:30}],
+  scen:[
+    {n:"In&Out 2016, Power8 vs Xeon: OLTP približno isto po jezgru",tag:"cmp",tl:"HPE/Intel",r:1.0},
+    {n:"Prowess 2022, Power10 E1080 vs Xeon 8358",tag:"cmp",tl:"Intel",r:1.65},
+    {n:"OLTP / core banking — konzervativno",tag:"ibm",tl:"IBM",r:3.5},
+    {n:"OLTP / core banking — agresivno",tag:"ibm",tl:"IBM",r:4},
+    {n:"Temenos Transact (T24) na E1180",tag:"ibm",tl:"IBM",r:4},
+    {n:"IBM FTM na Power S1122",tag:"ibm",tl:"IBM",r:2},
+    {n:"Vaš PoC rezultat na Power11 (izmereno)",tag:"poc",tl:"PoC",r:3}],
+  sel:2,
+  nx:{proc:"Intel Xeon Gold 6548Y+ (5. gen)",cores:"",sockets:2,servers:4,passive:0},
+  pw:{proc:"Power11 · 24 jezgra/socket",cores:"",sockets:2,servers:2,act:"",nonora:0},
+  years:5,kwh:0.24,hours:8760,rack:450,
+  p:{hw:220000,mt:3000,os:12000,hyp:0,bk:5000,kw:2.4,pue:1.5,u:4,ftes:0.5,ftec:24000,impl:50000,mig:0,sto:120000},
+  x:{hw:120000,mt:3000,os:10000,hyp:80000,bk:6000,kw:1.2,pue:1.5,u:2,ftes:0.5,ftec:24000,impl:50000,mig:0,sto:120000}
+};
+const KEY="oracle-power-x86-v42";
+const clone=o=>JSON.parse(JSON.stringify(o));
+let st=clone(DEF);
+try{const s=localStorage.getItem(KEY);if(s){const o=JSON.parse(s);if(o&&o.groups&&o.scen&&o.p&&o.x&&o.pw&&o.nx){st=Object.assign(clone(DEF),o);["p","x","pw","nx"].forEach(k=>st[k]=Object.assign(clone(DEF[k]),o[k]));}}}catch(e){}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(st));}catch(e){}}
+const marked=new Set();
+
+const $=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const num=v=>{const n=parseFloat(String(v).replace(",","."));return isFinite(n)?n:0};
+const pct=v=>Math.min(100,Math.max(0,num(v)))/100;
+const ce=x=>Math.ceil(x-1e-9);
+const fN=n=>isFinite(n)?(Math.round(n)+0).toLocaleString("de-DE"):"–";
+const fU=n=>isFinite(n)?(n<0?"−$":"$")+Math.round(Math.abs(n)).toLocaleString("de-DE"):"–";
+const fP=n=>isFinite(n)?(n*100).toFixed(1).replace(".",",")+" %":"–";
+const fR=n=>isFinite(n)?n.toFixed(2).replace(".",",")+"×":"–";
+const cls=n=>n>0.0005?"pos":n<-0.0005?"neg":"";
+function getP(path){return path.split(".").reduce((o,k)=>o==null?o:o[k],st)}
+function setP(path,val){const ks=path.split(".");let o=st;for(let i=0;i<ks.length-1;i++)o=o[ks[i]];o[ks[ks.length-1]]=val}
+const opt=(arr,cur)=>arr.map(a=>{const v=Array.isArray(a)?a[0]:a;return `<option${v===cur?" selected":""}>${esc(v)}</option>`}).join("");
+const fld=(k,l,step,hint,attrs)=>`<label class="f">${l}<input type="number" data-k="${k}" id="f_${k.replace(/\./g,"_")}" step="${step||1}" ${attrs||""} value="${esc(getP(k))}">${hint?`<span class="h">${hint}</span>`:""}</label>`;
+const coresOf=(list,name,ov)=>String(ov).trim()!==""?num(ov):((list.find(p=>p[0]===name)||[0,0])[1]);
+
+/* ---------- inputs ---------- */
+function renderStatic(){
+  const nin=(k,step,w)=>`<input type="number" data-k="${k}" id="f_${k.replace(/\./g,"_")}" step="${step}" min="0" value="${esc(getP(k))}" style="width:${w||100}px">`;
+  $("baseBody").innerHTML=
+    `<tr><td class="t">Database Enterprise Edition<br><small style="color:var(--mut)">po procesorskoj licenci</small></td><td class="in">${nin("ee",500,110)}</td><td class="in">${nin("eeD",1,70)}</td><td id="netEE"></td></tr>`+
+    `<tr><td class="t">Database Standard Edition 2<br><small style="color:var(--mut)">po soketu</small></td><td class="in">${nin("se2",500,110)}</td><td class="in">${nin("se2D",1,70)}</td><td id="netSE2"></td></tr>`;
+  $("oracleIn").innerHTML=
+    fld("sup","Godišnji Oracle support (% od neto cene)",1)+
+    fld("rez","Rezerva za rast na korišćena jezgra (%)",5)+
+    fld("cfx","Core factor x86 (Intel / AMD)",0.05,"Oracle tabela: 0,5")+
+    fld("cfp","Core factor IBM Power",0.05,"Power10: 1,0 · Power11 proveriti")+
+    `<label class="f">Model licenci<select data-k="model" id="f_model"><option value="nova"${st.model==="nova"?" selected":""}>Nova nabavka licenci</option><option value="post"${st.model==="post"?" selected":""}>Korisnik već ima x86 licence</option></select><span class="h">Postojeće: kupuje se samo razlika</span></label>`;
+  $("lpm").checked=!!st.lpm;
+  $("target").value=st.target;
+  $("optsBody").innerHTML=st.opts.map((o,i)=>`<tr>
+    <td class="c"><input type="checkbox" data-k="opts.${i}.2" id="o_c${i}" ${o[2]?"checked":""} aria-label="Koristi ${esc(o[0])}"></td>
+    <td class="t">${esc(o[0])}</td>
+    <td class="in"><input type="number" step="500" min="0" data-k="opts.${i}.1" id="o_p${i}" value="${o[1]}" style="width:100px"></td>
+    <td class="in"><input type="number" step="1" min="0" max="100" data-k="opts.${i}.3" id="o_d${i}" value="${o[3]}" style="width:66px"></td>
+    <td id="o_n${i}"></td></tr>`).join("");
+  renderGroups();renderScen();renderCfg();renderTcoIn();
+}
+function renderGroups(){
+  $("grpBody").innerHTML=st.groups.map((g,i)=>`<tr id="gr${i}" class="${marked.has(i)?"marked":""}">
+    <td class="c"><input type="checkbox" data-del="${i}" id="gd${i}" ${marked.has(i)?"checked":""} aria-label="Označi grupu ${esc(g.name)} za brisanje"></td>
+    <td class="in"><input type="text" data-k="groups.${i}.name" id="g${i}_n" value="${esc(g.name)}" style="min-width:120px;text-align:left;font-family:var(--f-body)"></td>
+    <td class="in"><input type="number" min="0" data-k="groups.${i}.hosts" id="g${i}_h" value="${esc(g.hosts)}" style="width:70px"></td>
+    <td class="in"><select data-k="groups.${i}.proc" id="g${i}_p" style="min-width:220px">${opt(X86,g.proc)}</select></td>
+    <td class="in"><input type="number" min="1" data-k="groups.${i}.sockets" id="g${i}_s" value="${esc(g.sockets)}" style="width:60px"></td>
+    <td class="in"><input type="number" min="0" data-k="groups.${i}.cores" id="g${i}_c" value="${esc(g.cores)}" title="Fiksno za izabrani procesor; za „Drugo“ unesite ručno" style="width:70px"></td>
+    <td class="in"><select data-k="groups.${i}.virt" id="g${i}_v" style="min-width:150px">${opt(VIRT,g.virt)}</select></td>
+    <td class="in"><select data-k="groups.${i}.role" id="g${i}_r" style="min-width:170px">${opt(ROLE,g.role)}</select></td>
+    <td class="in"><select data-k="groups.${i}.ed" id="g${i}_e" style="width:70px">${opt(["EE","SE2"],g.ed)}</select></td>
+    <td class="in"><input type="number" min="1" max="100" data-k="groups.${i}.util" id="g${i}_u" value="${esc(g.util)}" placeholder="100" style="width:64px"></td>
+    <td id="gK${i}"></td><td id="gU${i}"></td><td id="gL${i}"></td><td id="gC${i}"></td></tr>`).join("")||
+    `<tr><td class="t" colspan="14" style="color:var(--mut);padding:14px">Nema grupa servera. Kliknite „Dodaj grupu servera“ i unesite trenutno okruženje korisnika.</td></tr>`;
+  syncDel();
+}
+function syncDel(){
+  const n=marked.size,b=$("delGrp");b.disabled=n===0;b.textContent=n?`Obriši označene (${n})`:"Obriši označene";
+  const all=$("delAll");all.checked=n>0&&n===st.groups.length;all.indeterminate=n>0&&n<st.groups.length;
+}
+function renderScen(){
+  $("scBody").innerHTML=st.scen.map((s,i)=>`<tr id="scr${i}">
+    <td class="c"><input type="radio" name="sel" id="sel${i}" data-sel="${i}" ${st.sel===i?"checked":""} aria-label="Izaberi scenario"></td>
+    <td class="t"><span class="chip ${s.tag}">${esc(s.tl)}</span>${esc(s.n)}</td>
+    <td class="in"><input type="number" step="0.05" min="0.1" data-k="scen.${i}.r" id="sr${i}" value="${s.r}" style="width:80px"></td>
+    <td id="sc${i}"></td><td id="sl${i}"></td><td id="se${i}"></td><td id="ss${i}"></td></tr>`).join("");
+}
+function renderCfg(){
+  $("nxIn").innerHTML=
+    `<label class="f">x86 procesor<select data-k="nx.proc" id="nx_proc">${opt(X86,st.nx.proc)}</select></label>`+
+    `<label class="f">Jezgara po soketu<input type="number" data-k="nx.cores" id="nx_cores" min="0" value="${esc(st.nx.cores)}"><span class="h">Fiksno za izabrani procesor; za „Drugo“ unesite ručno</span></label>`+
+    fld("nx.sockets","Soketa po serveru",1,"","min=1")+
+    fld("nx.servers","Broj x86 servera (hostova u klasteru)",1,"Uključiti i HA/vMotion hostove","min=1")+
+    fld("nx.passive","Od toga pasivnih failover servera",1,"Bez licence, pravilo 10 dana godišnje","min=0");
+  $("pwIn").innerHTML=
+    `<label class="f">Power procesor<select data-k="pw.proc" id="pw_proc">${opt(PWR,st.pw.proc)}</select><span class="h">Broj jezgara proveriti za konkretan model</span></label>`+
+    `<label class="f">Fizička jezgra po soketu<input type="number" data-k="pw.cores" id="pw_cores" min="0" value="${esc(st.pw.cores)}"><span class="h">Fiksno za izabrani procesor; za „Drugo“ unesite ručno</span></label>`+
+    fld("pw.sockets","Soketa po serveru",1,"","min=1")+
+    fld("pw.servers","Broj Power servera",1,"Npr. prod + DR","min=1")+
+    `<label class="f">Aktivna jezgra po serveru<input type="number" data-k="pw.act" id="pw_act" min="0" value="${esc(st.pw.act)}" placeholder="auto"><span class="h" id="actHint">Na osnovu ovog polja se računaju Oracle licence. Prazno = automatski iz scenarija</span></label>`+
+    fld("pw.nonora","Od toga jezgra za ne-Oracle LPAR-ove po serveru",1,"VIOS, aplikacije… ne licenciraju se za Oracle","min=0");
+}
+const PLAT=[
+  ["hw","Cena hardvera po serveru (neto)","USD/server"],
+  ["mt","HW maintenance","USD/server/god."],
+  ["os","Operativni sistem","USD/server/god."],
+  ["hyp","Hypervisor za celo okruženje","USD/god. ukupno · PowerVM je uključen u Power, pa je tu obično 0"],
+  ["bk","Backup / monitoring","USD/server/god."],
+  ["kw","Potrošnja struje","kW/server, prosek pod opterećenjem"],
+  ["pue","PUE data centra","<b>PUE (Power Usage Effectiveness)</b> = ukupna potrošnja data centra / potrošnja IT opreme. 1,5 znači da na svaki 1 kW servera ide još 0,5 kW na hlađenje i gubitke. Tipično 1,2–2,0."],
+  ["u","Rack prostor","U/server"],
+  ["ftes","Broj administratora (FTE)","<b>FTE (Full-Time Equivalent)</b> = ekvivalent jednog zaposlenog sa punim radnim vremenom: 1 = ceo čovek, 0,5 = pola radnog vremena"],
+  ["ftec","Cena administratora","USD po čoveku godišnje (bruto plata i davanja)"],
+  ["impl","Implementacija (jednokratno)","USD"],
+  ["mig","Migracija: konverzija, testiranje, prekid rada","USD jednokratno"],
+  ["sto","Storage / SAN (jednokratno)","USD"]];
+function renderTcoIn(){
+  $("genIn").innerHTML=
+    `<label class="f">Period analize (godine)<select data-k="years" id="f_years">${[1,2,3,4,5,6,7,8,9,10].map(n=>`<option value="${n}"${+st.years===n?" selected":""}>${n}</option>`).join("")}</select></label>`+
+    fld("kwh","Cena struje (USD/kWh)",0.01,"Uključiti mrežne i ostale troškove")+
+    fld("hours","Sati rada godišnje",1,"24 × 365 = 8.760")+
+    fld("rack","Cena rack U godišnje (USD)",10,"0 ako je oprema u korisnikovom DC-u");
+  const row=(k,l,h)=>`<tr><td class="t">${l}</td><td class="in"><input type="number" step="any" min="0" data-k="p.${k}" id="p_${k}" value="${esc(st.p[k])}" style="min-width:110px"></td><td class="in"><input type="number" step="any" min="0" data-k="x.${k}" id="x_${k}" value="${esc(st.x[k])}" style="min-width:110px"></td><td class="hint">${h}</td></tr>`;
+  $("platBody").innerHTML=`<tr><td class="t">Broj servera</td><td id="np"></td><td id="nx"></td><td class="hint">iz koraka 5</td></tr>`+PLAT.map(r=>row(...r)).join("");
+}
+
+function syncCores(el,list,proc,path){
+  if(!el)return;const auto=(list.find(p=>p[0]===proc)||[0,0])[1];
+  if(auto>0){el.readOnly=true;el.value=auto;if(String(getP(path)).trim()!=="")setP(path,"");}
+  else{if(el.readOnly){el.readOnly=false;el.value=getP(path);}el.placeholder="unesite";}
+}
+/* ---------- model ---------- */
+let NET={ee:0,se2:0,opt:0};
+function groupCalc(g){
+  const cps=coresOf(X86,g.proc,g.cores);
+  const hosts=Math.max(0,num(g.hosts)),soc=Math.max(0,num(g.sockets));
+  const K=hosts*soc*cps;
+  const util=String(g.util).trim()===""?100:Math.min(100,Math.max(0,num(g.util)));
+  const U=K>0?ce(K*util/100*(1+num(st.rez)/100)):0;
+  const se2=g.ed==="SE2",pas=g.role===PASSIVE;
+  const L=K===0||pas?0:se2?hosts*soc:ce(K*num(st.cfx));
+  return {cps,hosts,soc,K,U,L,C:L*(se2?NET.se2:NET.ee),se2,pas,name:g.name,role:g.role,missing:K===0&&hosts>0};
+}
+function pwCfg(){
+  const cps=coresOf(PWR,st.pw.proc,st.pw.cores);
+  const soc=Math.max(1,num(st.pw.sockets)),n=Math.max(1,Math.round(num(st.pw.servers)));
+  return {cps,soc,n,phys:cps*soc};
+}
+function powerFor(G,ratio){
+  const cfg=pwCfg();
+  const rows=G.map(g=>{
+    const pc=ratio>0&&g.U>0?ce(g.U/ratio):0;
+    const pl=pc===0||g.pas?0:g.se2?g.L:ce(pc*num(st.cfp));
+    return {pc,pl,cost:pl*(g.se2?NET.se2:NET.ee)};
+  });
+  const cores=rows.reduce((a,r)=>a+r.pc,0);
+  const actIn=!st.indep&&String(st.pw.act).trim()!==""?num(st.pw.act):0;
+  const non=Math.max(0,num(st.pw.nonora));
+  let lpmRes=0;
+  if(st.lpm&&cfg.n>1)rows.forEach((r,i)=>{if(!G[i].pas&&!G[i].se2)lpmRes=Math.max(lpmRes,r.pc)});
+  const perSrv=Math.max(actIn,ce(cores/cfg.n)+lpmRes+non),active=perSrv*cfg.n;
+  const oraActive=Math.max(0,perSrv-non)*cfg.n;
+  const excl=G.reduce((a,g,i)=>a+(g.se2||g.pas?rows[i].pc:0),0);
+  const eeLpar=rows.reduce((a,r,i)=>a+(G[i].se2?0:r.pl),0);
+  const se2L=rows.reduce((a,r,i)=>a+(G[i].se2?r.pl:0),0),se2C=rows.reduce((a,r,i)=>a+(G[i].se2?r.cost:0),0);
+  const licCores=Math.max(0,oraActive-excl);
+  const eeL=Math.max(eeLpar,ce(licCores*num(st.cfp)));
+  const extraL=eeL-eeLpar,extraC=extraL*NET.ee;
+  return {rows,cores,perSrv,active,oraActive,licCores,non,lic:eeL+se2L,cost:eeL*NET.ee+se2C,extraL,extraC,cfg,lpmRes};
+}
+function powerIndep(){
+  const cfg=pwCfg(),non=Math.max(0,num(st.pw.nonora));
+  const perSrv=Math.max(0,num(st.pw.act)),active=perSrv*cfg.n,oraActive=Math.max(0,perSrv-non)*cfg.n;
+  const lic=ce(oraActive*num(st.cfp));
+  return {indep:true,cfg,non,perSrv,active,oraActive,licCores:oraActive,cores:oraActive,lic,cost:lic*NET.ee,lpmRes:0,extraL:0,extraC:0,rows:[]};
+}
+function newX86(G){
+  const cps=coresOf(X86,st.nx.proc,st.nx.cores);
+  const soc=Math.max(1,num(st.nx.sockets)),n=Math.max(1,Math.round(num(st.nx.servers)));
+  const np=Math.min(n,Math.max(0,Math.round(num(st.nx.passive))));
+  const act=n-np,perSrv=soc*cps,licCores=act*perSrv;
+  const req=st.indep?0:G.reduce((a,g)=>a+(g.se2||g.pas?0:g.U),0);
+  const se2L=st.indep?0:G.reduce((a,g)=>a+(g.se2?g.L:0),0),se2C=st.indep?0:G.reduce((a,g)=>a+(g.se2?g.C:0),0);
+  const eeL=ce(licCores*num(st.cfx));
+  const minSrv=perSrv>0?ce(req/perSrv):0;
+  return {cps,soc,n,np,act,perSrv,licCores,req,eeL,lic:eeL+se2L,cost:eeL*NET.ee+se2C,se2L,fit:perSrv>0&&licCores>=req,minSrv};
+}
+function compute(){
+  NET.opt=st.opts.reduce((a,o)=>a+(o[2]?num(o[1])*(1-pct(o[3])):0),0);
+  NET.ee=num(st.ee)*(1-pct(st.eeD))+NET.opt;
+  NET.se2=num(st.se2)*(1-pct(st.se2D));
+  const G=st.groups.map(groupCalc);
+  const X={K:0,U:0,L:0,C:0,hosts:0};
+  G.forEach(g=>{X.K+=g.K;X.U+=g.U;X.L+=g.L;X.C+=g.C;X.hosts+=g.hosts});
+  if(st.sel>=st.scen.length)st.sel=0;
+  const ratio=num(st.scen[st.sel].r);
+  const P=powerFor(G,ratio);
+  return {G,X,P,PN:st.indep?powerIndep():P,NX:newX86(G),ratio};
+}
+function tco(M){
+  const yrs=Math.max(1,Math.min(10,Math.round(num(st.years))));
+  const post=st.model==="post",have=M.X.C;
+  const side=(c,n,licVal)=>{
+    const s=st[c],capex=post?Math.max(0,licVal-have):licVal;
+    const sup=licVal*num(st.sup)/100;
+    const hw=n*num(s.hw),one=num(s.impl)+num(s.mig)+num(s.sto);
+    const os=n*num(s.os),hyp=num(s.hyp);
+    const en=n*num(s.kw)*num(st.hours)*num(st.kwh)*num(s.pue);
+    const oth=n*(num(s.mt)+num(s.bk))+en+n*num(s.u)*num(st.rack)+num(s.ftes)*num(s.ftec);
+    const first=capex+hw+one,annual=sup+os+hyp+oth;
+    return {n,licVal,capex,sup,hw,one,os,hyp,en,oth,first,annual,total:first+yrs*annual};
+  };
+  const P=side("p",M.PN.cfg.n,M.PN.cost),X=side("x",M.NX.n,M.NX.cost);
+  const years=[];let cp=0,cx=0,be=null;
+  for(let y=1;y<=10;y++){const a=P.annual+(y===1?P.first:0),b=X.annual+(y===1?X.first:0);cp+=a;cx+=b;years.push({y,a,b,cp,cx});if(be===null&&cp<=cx)be=y;}
+  return {yrs,P,X,years,be,sav:X.total?1-P.total/X.total:0};
+}
+
+/* ---------- output ---------- */
+const S=(id,t)=>{const e=$(id);if(e)e.textContent=t};
+function setCls(id,c){const e=$(id);if(e){e.classList.remove("pos","neg");if(c)e.classList.add(c)}}
+const msgs=(id,arr)=>{$(id).innerHTML=arr.map(m=>`<div class="msg ${m[0]}">${esc(m[1])}</div>`).join("")};
+const kpi=(l,v,sub,k,c)=>`<div class="kpi ${k||""}"><small>${l}</small><b class="${c||""}">${v}</b>${sub?`<span class="vs">${sub}</span>`:""}</div>`;
+function update(){
+  const M=compute(),T=tco(M);
+  // 1
+  S("netEE",fU(num(st.ee)*(1-pct(st.eeD))));S("netSE2",fU(NET.se2));
+  st.opts.forEach((o,i)=>S("o_n"+i,o[2]?fU(num(o[1])*(1-pct(o[3]))):"–"));
+  $("netPrices").innerHTML=`<div><span>Opcije neto po licenci:</span> <b>${fU(NET.opt)}</b></div><div><span>Ukupno po EE licenci (baza + opcije):</span> <b>${fU(NET.ee)}</b></div>`;
+  // 2
+  M.G.forEach((g,i)=>{S("gK"+i,fN(g.K));S("gU"+i,fN(g.U));S("gL"+i,fN(g.L));S("gC"+i,fU(g.C));
+    syncCores($("g"+i+"_c"),X86,st.groups[i].proc,"groups."+i+".cores")});
+  const gm=[];
+  M.G.forEach(g=>{if(g.missing)gm.push(["bad",`Grupa „${g.name}“: nedostaje broj jezgara po soketu (izabran je „Drugo“).`]);
+    if(g.se2&&g.soc>2)gm.push(["bad",`Grupa „${g.name}“: SE2 je dozvoljen samo na serverima sa najviše 2 soketa.`]);});
+  if(M.G.some(g=>g.se2))gm.push(["info","SE2 se licencira po soketu. Za SE2 grupe licence su prikazane iste na svim platformama."]);
+  if(M.G.some(g=>g.pas))gm.push(["info","Pasivni failover: prikazan bez licenci (pravilo 10 dana godišnje). Ako se koristi više od toga, promenite ulogu u „Aktivno“."]);
+  msgs("grpMsgs",gm);
+  // 3
+  st.scen.forEach((s,i)=>{const r=num(s.r),R=powerFor(M.G,r),sv=M.X.C?1-R.cost/M.X.C:0;
+    S("sc"+i,r>0?fN(R.cores):"–");S("sl"+i,r>0?fN(R.lic):"–");S("se"+i,r>0?fU(R.cost):"–");S("ss"+i,r>0&&M.X.C?fP(sv):"–");setCls("ss"+i,cls(sv));
+    const tr=$("scr"+i);if(tr)tr.classList.toggle("selrow",i===st.sel)});
+  const RR=[1,1.5,2,2.5,3,3.5,4,5];
+  $("sensHead").innerHTML=`<tr><th class="t">Odnos</th>${RR.map(r=>`<th>${String(r).replace(".",",")}×</th>`).join("")}</tr>`;
+  $("sensBody").innerHTML=`<tr><td class="t">Ušteda</td>${RR.map(r=>{const sv=M.X.C?1-powerFor(M.G,r).cost/M.X.C:0;return `<td class="${cls(sv)}">${M.X.C?fP(sv):"–"}</td>`}).join("")}</tr>`;
+  const tgt=pct(Math.min(95,num(st.target)));let req=null;
+  if(M.X.C>0){for(let r=0.5;r<=12.0001;r+=0.05){if(1-powerFor(M.G,r).cost/M.X.C>=tgt){req=r;break}}}
+  S("reqRatio",M.X.C<=0?"–":req===null?"> 12×":fR(req));
+  // 4
+  const rows=M.G.map((g,i)=>{const p=M.P.rows[i],d=g.C-p.cost;return `<tr><td class="t">${esc(g.name||"—")}</td><td class="t">${esc(g.role)}</td><td>${fN(g.K)}</td><td>${fN(g.U)}</td><td>${fN(g.L)}</td><td>${fU(g.C)}</td><td>${fN(p.pc)}</td><td>${fN(p.pl)}</td><td>${fU(p.cost)}</td><td class="${cls(d)}">${fU(d)}</td></tr>`}).join("");
+  const extra=M.P.extraL>0?`<tr class="extra"><td class="t" colspan="7">Dodatno: licenciraju se sva aktivna Oracle jezgra Power servera (zaokruživanje po serveru, ručno aktivirana jezgra${st.lpm?", LPM rezerva":""})</td><td>${fN(M.P.extraL)}</td><td>${fU(M.P.extraC)}</td><td>${fU(-M.P.extraC)}</td></tr>`:"";
+  const dT=M.X.C-M.P.cost,svL=M.X.C?1-M.P.cost/M.X.C:0,supX=M.X.C*num(st.sup)/100,supP=M.P.cost*num(st.sup)/100;
+  $("cmpBody").innerHTML=rows+extra+`<tr class="tot"><td class="t">Ukupno</td><td class="t">ušteda ${fP(svL)}</td><td>${fN(M.X.K)}</td><td>${fN(M.X.U)}</td><td>${fN(M.X.L)}</td><td>${fU(M.X.C)}</td><td>${fN(M.P.cores)}</td><td>${fN(M.P.lic)}</td><td>${fU(M.P.cost)}</td><td class="${cls(dT)}">${fU(dT)}</td></tr>`+
+    `<tr><td class="t" colspan="5">Godišnji Oracle support</td><td>${fU(supX)}</td><td colspan="2"></td><td>${fU(supP)}</td><td class="${cls(supX-supP)}">${fU(supX-supP)}</td></tr>`;
+  const cm=[];
+  if(M.ratio<=num(st.cfp)/Math.max(0.01,num(st.cfx)))cm.push(["warn",`Izabrani odnos (${fR(M.ratio)}) je na pragu rentabilnosti ili ispod njega. Po jezgru Power nije jeftiniji; ušteda dolazi samo od manjeg broja korišćenih jezgara.`]);
+  if(st.lpm)cm.push(["info",`LPM je uključen: svaki Power server drži slobodna aktivna jezgra za prijem najvećeg LPAR-a (${fN(M.P.lpmRes)} jezgara), a licence pokrivaju sva aktivna jezgra svih Power servera. Proveriti sa Oracle-om.`]);
+  msgs("cmpMsgs",cm);
+  // 5
+  const NX=M.NX,PN=M.PN,cfg=PN.cfg,pfit=cfg.phys>0&&PN.perSrv<=cfg.phys&&(!st.indep||PN.perSrv>0),ind=!!st.indep;
+  $("indep").checked=ind;
+  S("zoneText",ind?"Nezavisno poređenje: porede se samo nova x86 i nova Power konfiguracija unete u koraku 5. Koraci 2–4 i izabrani scenario ne utiču na ovaj deo.":"Od ovog koraka poredi se potpuno novo x86 okruženje sa novim IBM Power okruženjem: novi serveri, nove licence i TCO. Oba se dimenzionišu prema trenutnom okruženju (korak 2) i izabranom scenariju (korak 3).");
+  S("modeText",ind?"Uključeno: x86 licence = sva jezgra aktivnih servera × core factor; Power licence = aktivna Oracle jezgra po serveru × broj servera × core factor. Polje „Aktivna jezgra po serveru“ je obavezno. Cene i popusti i dalje dolaze iz koraka 1.":"Isključeno: novo okruženje prati trenutno. Potrebna jezgra dolaze iz koraka 2 (korišćena jezgra) i izabranog scenarija u koraku 3; kalkulator proverava da li konfiguracije imaju dovoljno kapaciteta.");
+  S("actHint",ind?"Obavezno: na osnovu ovog polja se računaju Oracle licence.":"Na osnovu ovog polja se računaju Oracle licence. Prazno = automatski iz scenarija");
+  const pa=$("pw_act");if(pa)pa.placeholder=ind?"unesite":"auto";
+  syncCores($("nx_cores"),X86,st.nx.proc,"nx.cores");syncCores($("pw_cores"),PWR,st.pw.proc,"pw.cores");
+  $("nxOut").innerHTML=(ind?"":`<div><span>Potrebna jezgra:</span> <b>${fN(NX.req)}</b></div>`)+`<div><span>Jezgra po serveru:</span> <b>${fN(NX.perSrv)}</b></div><div><span>Licencirana jezgra (aktivni serveri):</span> <b>${fN(NX.licCores)}</b></div><div><span>Oracle licence:</span> <b>${fN(NX.lic)}</b></div>`+(ind?"":`<div><span>Kapacitet:</span> <span class="pill ${NX.fit?"ok":"no"}">${NX.fit?"dovoljan":"nedovoljan"}</span></div>`);
+  const sug=M.ratio>0?ce(NX.licCores/M.ratio):0;
+  $("pwOut").innerHTML=(ind?`<div><span>Procena po scenariju (${fR(M.ratio)}):</span> <b>${fN(sug)}</b> jezgara za ovaj x86</div>`:`<div><span>Potrebna jezgra (scenario):</span> <b>${fN(PN.cores)}</b></div>`)+`<div><span>Aktivna jezgra po serveru:</span> <b>${fN(PN.perSrv)}</b> od ${fN(cfg.phys)}</div><div><span>Ukupno aktivnih jezgara:</span> <b>${fN(PN.active)}</b></div><div><span>Licencirana Oracle jezgra:</span> <b>${fN(PN.licCores)}</b></div><div><span>Oracle licence:</span> <b>${fN(PN.lic)}</b></div><div><span>Kapacitet:</span> <span class="pill ${pfit?"ok":"no"}">${pfit?"dovoljan":"nedovoljan"}</span></div>`;
+  const fm=[];
+  if(NX.perSrv===0)fm.push(["bad","x86: unesite broj jezgara po soketu."]);
+  else if(!ind&&!NX.fit)fm.push(["bad",`x86: aktivni serveri imaju ${fN(NX.licCores)} jezgara, a potrebno je ${fN(NX.req)}. Potrebno je najmanje ${fN(NX.minSrv)} aktivnih servera ili jači procesor.`]);
+  else if(!ind&&NX.licCores>NX.req*1.5)fm.push(["warn",`x86: licencira se ${fN(NX.licCores)} jezgara, a potrebno je ${fN(NX.req)}. Na x86 se licencira ceo host, pa višak kapaciteta povećava Oracle trošak; razmotrite manji procesor ili manje servera.`]);
+  if(cfg.phys===0)fm.push(["bad","Power: unesite broj jezgara po soketu."]);
+  if(ind){
+    if(PN.perSrv===0)fm.push(["bad","Power: u nezavisnom poređenju unesite aktivna jezgra po serveru."]);
+    else if(PN.perSrv>cfg.phys)fm.push(["bad",`Power: uneto je ${fN(PN.perSrv)} aktivnih jezgara po serveru, a server ima ${fN(cfg.phys)} fizičkih.`]);
+    fm.push(["info","Nezavisno poređenje: SE2 grupe i pasivni serveri iz koraka 2 se ne prenose; obe strane se računaju kao Enterprise Edition. Ako je u koraku 1 izabrano „Korisnik već ima x86 licence“, vrednost postojećih licenci se i dalje uzima iz koraka 2."]);
+  }else{
+    if(String(st.pw.act).trim()!==""&&num(st.pw.act)<ce(PN.cores/cfg.n)+PN.lpmRes+PN.non)fm.push(["warn",`Power: uneta aktivna jezgra po serveru (${fN(num(st.pw.act))}) su manja od potrebnih (${fN(ce(PN.cores/cfg.n)+PN.lpmRes+PN.non)}); kalkulator koristi potreban broj.`]);
+    else if(!pfit)fm.push(["bad",`Power: potrebno je ${fN(PN.perSrv)} aktivnih jezgara po serveru, a server ima ${fN(cfg.phys)}. Dodajte server, soket ili izaberite procesor sa više jezgara.`]);
+  }
+  if(NX.n&&cfg.n&&(ind||NX.fit)&&pfit)fm.push(["info",`Broj servera: ${fN(NX.n)} novih x86 naspram ${fN(cfg.n)} Power servera, odnosno ≈ ${(NX.n/cfg.n).toFixed(1).replace(".",",")} x86 servera po jednom Power serveru. Računa se iz broja servera unetih iznad.`]);
+  msgs("cfgMsgs",fm);
+  // 6
+  S("np",fN(T.P.n));S("nx",fN(T.X.n));
+  const post=st.model==="post";
+  const R=[
+    ["Oracle licence (broj)",fN(PN.lic),fN(NX.lic),"Power: aktivna Oracle jezgra (korak 5) × core factor · x86: sva jezgra aktivnih servera × core factor"],
+    ["Vrednost Oracle licenci (neto)",fU(T.P.licVal),fU(T.X.licVal),"licence + opcije, posle popusta"],
+    ["Oracle licence — nabavka",fU(T.P.capex),fU(T.X.capex),post?`postojeće licence vrede ${fU(M.X.C)}; kupuje se samo razlika`:"nova nabavka"],
+    ["Oracle support godišnje",fU(T.P.sup),fU(T.X.sup),"vrednost licenci × support %"],
+    ["Hardver",fU(T.P.hw),fU(T.X.hw),"broj servera × cena"],
+    ["Ostalo jednokratno",fU(T.P.one),fU(T.X.one),"implementacija + migracija + storage"],
+    ["OS godišnje",fU(T.P.os),fU(T.X.os),"broj servera × OS"],
+    ["Hypervisor godišnje",fU(T.P.hyp),fU(T.X.hyp),"ukupno za celo okruženje"],
+    ["Struja godišnje",fU(T.P.en),fU(T.X.en),"kW × sati × cena × PUE"],
+    ["Ostali infra OPEX godišnje",fU(T.P.oth),fU(T.X.oth),"maintenance + backup + struja + rack + administratori (FTE × cena)"],
+    ["Ukupno jednokratno (godina 1)",fU(T.P.first),fU(T.X.first),""],
+    ["Ukupno godišnje",fU(T.P.annual),fU(T.X.annual),"support + OS + hypervisor + ostalo"]];
+  $("resBody").innerHTML=R.map(r=>`<tr><td class="t">${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td><td class="hint">${r[3]}</td></tr>`).join("")+
+    `<tr class="tot"><td class="t">Ukupan TCO za ${T.yrs} ${T.yrs===1?"godinu":"godina"}</td><td>${fU(T.P.total)}</td><td>${fU(T.X.total)}</td><td class="t">jednokratno + period × godišnje</td></tr>`+
+    `<tr class="tot"><td class="t">Power ušteda naspram x86</td><td class="${cls(T.sav)}">${fP(T.sav)}</td><td class="${cls(T.X.total-T.P.total)}">${fU(T.X.total-T.P.total)}</td><td class="t">pozitivno = Power ima niži TCO</td></tr>`;
+  // 7
+  $("yrBody").innerHTML=T.years.slice(0,T.yrs).map(r=>`<tr><td>${r.y}</td><td>${fU(r.a)}</td><td>${fU(r.b)}</td><td>${fU(r.cp)}</td><td>${fU(r.cx)}</td><td class="${cls(r.cx-r.cp)}">${fU(r.cx-r.cp)}</td></tr>`).join("");
+  drawChart(T);
+  S("beNote",T.be?`Power je kumulativno jeftiniji od ${T.be}. godine (posmatrano do 10 godina).`:"U 10 godina Power kumulativno nije jeftiniji od novog x86 sa ovim unosima.");
+  // summary
+  const svN=NX.cost?1-PN.cost/NX.cost:0;
+  $("kpiA").innerHTML=kpi("Trenutno x86 licence",fN(M.X.L),fU(M.X.C),"x")+kpi("Power licence",fN(M.P.lic),fU(M.P.cost),"p")+kpi("Ušteda na licencama",M.X.C?fP(svL):"–",fU(dT),"",cls(svL));
+  if(ind&&PN.perSrv===0){$("kpiB").innerHTML=kpi("Novo x86 licence",fN(NX.lic),fU(NX.cost),"x")+kpi("Novi Power licence","–","unesite aktivna jezgra (korak 5)","p")+kpi("Ušteda licenci","–","","")+kpi(`TCO ${T.yrs} god. x86`,fU(T.X.total),"","x")+kpi(`TCO ${T.yrs} god. Power`,"–","","p")+kpi("Ušteda TCO","–","","");}
+  else $("kpiB").innerHTML=kpi("Novo x86 licence",fN(NX.lic),fU(NX.cost),"x")+kpi("Novi Power licence",fN(PN.lic),fU(PN.cost),"p")+kpi("Ušteda licenci",NX.cost?fP(svN):"–",fU(NX.cost-PN.cost),"",cls(svN))+
+    kpi(`TCO ${T.yrs} god. x86`,fU(T.X.total),"","x")+kpi(`TCO ${T.yrs} god. Power`,fU(T.P.total),"","p")+kpi("Ušteda TCO",fP(T.sav),fU(T.X.total-T.P.total),"",cls(T.sav));
+  $("scenline").innerHTML=`Scenario (korak 3): <strong>${esc(st.scen[st.sel].n)}</strong> · odnos ${fR(M.ratio)} · ${ind?"<strong>novo okruženje nezavisno od trenutnog</strong> · ":""}novi Power ${fN(PN.active)} aktivnih jezgara na ${fN(cfg.n)} servera · novo x86 ${fN(NX.n)} servera${st.lpm?" · LPM uključen":""}${post?" · postojeće licence":""}`;
+}
+function drawChart(T){
+  const ys=T.years.slice(0,Math.max(2,T.yrs));
+  const W=620,H=280,L=64,R=16,Tp=26,B=34,mx=Math.max(1,...ys.map(r=>Math.max(r.cp,r.cx)));
+  const step=niceStep(mx/4),top=Math.ceil(mx/step)*step;
+  const px=i=>L+(W-L-R)*(ys.length>1?i/(ys.length-1):.5),py=v=>H-B-(H-B-Tp)*v/top;
+  let g="";
+  for(let v=0;v<=top+1e-6;v+=step){const y=py(v);g+=`<line x1="${L}" x2="${W-R}" y1="${y}" y2="${y}" stroke="var(--line)" stroke-width="1"/><text x="${L-8}" y="${y+4}" text-anchor="end">${fmtM(v)}</text>`}
+  ys.forEach((r,i)=>{g+=`<text x="${px(i)}" y="${H-12}" text-anchor="middle">${r.y}. god.</text>`});
+  const line=(k,c)=>`<polyline fill="none" stroke="${c}" stroke-width="2.5" stroke-linejoin="round" points="${ys.map((r,i)=>px(i)+","+py(r[k])).join(" ")}"/>`+ys.map((r,i)=>`<circle cx="${px(i)}" cy="${py(r[k])}" r="${i===ys.length-1?4.5:3}" fill="${c}"/>`).join("");
+  const last=ys[ys.length-1],hiX=last.cx>=last.cp;
+  g+=line("cx","var(--x86)")+line("cp","var(--power)");
+  const lab=(v,txt,c,up)=>`<text x="${W-R}" y="${up?Math.max(Tp+10,py(v)-9):Math.min(H-B-4,py(v)+17)}" text-anchor="end" style="fill:${c};font-weight:600">${txt} ${fmtM(v)}</text>`;
+  g+=lab(last.cx,"x86","var(--x86)",hiX)+lab(last.cp,"Power","var(--power)",!hiX);
+  $("chart").innerHTML=`<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="Kumulativni TCO po godinama, novi IBM Power i novi x86"><text x="${L}" y="14" style="font-weight:600;fill:var(--fg)">Kumulativni TCO (USD)</text>${g}</svg>`;
+}
+function niceStep(x){if(x<=0)return 1;const p=Math.pow(10,Math.floor(Math.log10(x))),m=x/p;return (m<=1?1:m<=2?2:m<=2.5?2.5:m<=5?5:10)*p}
+function fmtM(v){return v>=1e6?(v/1e6).toFixed(v>=1e7?0:1).replace(".",",")+" M":v>=1e3?Math.round(v/1e3)+" k":Math.round(v)+""}
+
+/* ---------- events ---------- */
+function onInput(t){
+  if(t.dataset.sel!==undefined){st.sel=+t.dataset.sel;save();update();return}
+  if(t.dataset.del!==undefined){const i=+t.dataset.del;t.checked?marked.add(i):marked.delete(i);const tr=$("gr"+i);if(tr)tr.classList.toggle("marked",t.checked);syncDel();return}
+  if(t.id==="delAll"){marked.clear();if(t.checked)st.groups.forEach((_,i)=>marked.add(i));renderGroups();update();return}
+  const k=t.dataset.k;if(!k)return;
+  let v=t.type==="checkbox"?t.checked:t.type==="number"?(t.value===""?"":num(t.value)):t.value;
+  setP(k,v);save();update();
+}
+document.addEventListener("input",e=>{if(e.target.tagName!=="SELECT"&&e.target.type!=="checkbox"&&e.target.type!=="radio")onInput(e.target)});
+document.addEventListener("change",e=>{const t=e.target;if(t.tagName==="SELECT"||t.type==="checkbox"||t.type==="radio")onInput(t)});
+$("addGrp").addEventListener("click",()=>{st.groups.push({name:"Nova grupa",hosts:2,proc:X86[6][0],sockets:2,cores:"",virt:VIRT[0],role:ROLE[0],ed:"EE",util:""});save();renderGroups();update();});
+$("delGrp").addEventListener("click",()=>{if(!marked.size)return;st.groups=st.groups.filter((_,i)=>!marked.has(i));marked.clear();save();renderGroups();update();});
+let armed=false,armT;
+$("reset").addEventListener("click",()=>{
+  const b=$("reset");
+  if(!armed){armed=true;b.textContent="Kliknite ponovo za potvrdu";armT=setTimeout(()=>{armed=false;b.textContent="Vrati primer vrednosti"},3000);return}
+  clearTimeout(armT);armed=false;b.textContent="Vrati primer vrednosti";
+  st=clone(DEF);marked.clear();save();renderStatic();update();
+});
+const gd=$("guide");
+try{if(localStorage.getItem(KEY+"-guide")==="closed")gd.open=false}catch(e){}
+gd.addEventListener("toggle",()=>{try{localStorage.setItem(KEY+"-guide",gd.open?"open":"closed")}catch(e){}});
+renderStatic();update();
+})();
+</script>
+
+<script>
+if("serviceWorker" in navigator){window.addEventListener("load",()=>{navigator.serviceWorker.register("./sw.js",{scope:"./"}).catch(()=>{});});}
+</script>
+</body>
+</html>
