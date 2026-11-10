@@ -1,6 +1,6 @@
 [package]
 name = "oracle-tco"
-version = "1.0.1"
+version = "1.0.2"
 description = "Oracle licensing and TCO calculator: IBM Power vs x86"
 edition = "2021"
 

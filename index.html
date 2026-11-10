@@ -176,7 +176,7 @@ svg text{fill:var(--mut);font:11px var(--f-body)}
       <div class="rule"><b>Prag rentabilnosti</b>Zbog faktora 1,0 naspram 0,5, Power mora imati više od 2× bolje performanse po jezgru da bi licence po jezgru bile jeftinije.</div>
       <div class="rule"><b>Korišćena jezgra</b>Postojeći x86 se licencira na sva jezgra hosta, a nova okruženja se dimenzionišu prema vršnoj potrošnji plus rezerva za rast.</div>
       <div class="rule"><b>Pasivni failover i DR</b>Server samo za failover može do 10 dana godišnje bez licence. DR sa Data Guard-om i Test/Dev se licenciraju.</div>
-      <div class="rule"><b>Standard Edition 2</b>Licencira se po soketu (maks. 2 soketa); za SE2 Power ne donosi uštedu na licencama.</div>
+      <div class="rule"><b>Standard Edition 2</b>Licencira se po soketu (maks. 2 soketa); za SE2 Power ne donosi uštedu na licencama. U koraku 5 SE2 serveri se unose posebno od EE servera. DR za Enterprise bazu mora biti Enterprise Edition, jer Data Guard postoji samo u EE.</div>
       <div class="rule"><b>Postojeće licence</b>Ukidanje supporta na delu licenci podleže Oracle pravilima o repricing-u. Proveriti pre ponude.</div>
     </div>
   </details>
@@ -356,8 +356,8 @@ const DEF={
     {n:"IBM FTM na Power S1122",tag:"ibm",tl:"IBM",r:2},
     {n:"Vaš PoC rezultat na Power11 (izmereno)",tag:"poc",tl:"PoC",r:3}],
   sel:2,
-  nx:{proc:"Intel Xeon Gold 6548Y+ (5. gen)",cores:"",sockets:2,servers:4,passive:0},
-  pw:{proc:"Power11 · 24 jezgra/socket",cores:"",sockets:2,servers:2,act:"",nonora:0},
+  nx:{proc:"Intel Xeon Gold 6548Y+ (5. gen)",cores:"",sockets:2,servers:4,passive:0,se2srv:0},
+  pw:{proc:"Power11 · 24 jezgra/socket",cores:"",sockets:2,servers:2,act:"",nonora:0,se2srv:0},
   years:5,kwh:0.24,hours:8760,rack:450,
   p:{hw:220000,mt:3000,os:12000,hyp:0,bk:5000,kw:2.4,pue:1.5,u:4,ftes:0.5,ftec:24000,impl:50000,mig:0,sto:120000},
   x:{hw:120000,mt:3000,os:10000,hyp:80000,bk:6000,kw:1.2,pue:1.5,u:2,ftes:0.5,ftec:24000,impl:50000,mig:0,sto:120000}
@@ -441,13 +441,15 @@ function renderCfg(){
     `<label class="f">x86 procesor<select data-k="nx.proc" id="nx_proc">${opt(X86,st.nx.proc)}</select></label>`+
     `<label class="f">Jezgara po soketu<input type="number" data-k="nx.cores" id="nx_cores" min="0" value="${esc(st.nx.cores)}"><span class="h">Fiksno za izabrani procesor; za „Drugo“ unesite ručno</span></label>`+
     fld("nx.sockets","Soketa po serveru",1,"","min=1")+
-    fld("nx.servers","Broj x86 servera (hostova u klasteru)",1,"Uključiti i HA/vMotion hostove","min=1")+
-    fld("nx.passive","Od toga pasivnih failover servera",1,"Bez licence, pravilo 10 dana godišnje","min=0");
+    fld("nx.servers","x86 serveri sa Enterprise Edition (hostovi u klasteru)",1,"Uključiti i HA/vMotion hostove","min=0")+
+    fld("nx.se2srv","x86 serveri sa Standard Edition 2",1,"Isti procesor; SE2 najviše 2 soketa; licenca po soketu","min=0")+
+    fld("nx.passive","Od EE servera pasivnih failover",1,"Bez licence, pravilo 10 dana godišnje","min=0");
   $("pwIn").innerHTML=
     `<label class="f">Power procesor<select data-k="pw.proc" id="pw_proc">${opt(PWR,st.pw.proc)}</select><span class="h">Broj jezgara proveriti za konkretan model</span></label>`+
     `<label class="f">Fizička jezgra po soketu<input type="number" data-k="pw.cores" id="pw_cores" min="0" value="${esc(st.pw.cores)}"><span class="h">Fiksno za izabrani procesor; za „Drugo“ unesite ručno</span></label>`+
     fld("pw.sockets","Soketa po serveru",1,"","min=1")+
-    fld("pw.servers","Broj Power servera",1,"Npr. prod + DR","min=1")+
+    fld("pw.servers","Power serveri sa Enterprise Edition",1,"Npr. prod + DR","min=0")+
+    fld("pw.se2srv","Power serveri sa Standard Edition 2",1,"Isti procesor; SE2 najviše 2 soketa; licenca po soketu","min=0")+
     `<label class="f">Aktivna jezgra po serveru<input type="number" data-k="pw.act" id="pw_act" min="0" value="${esc(st.pw.act)}" placeholder="auto"><span class="h" id="actHint">Na osnovu ovog polja se računaju Oracle licence. Prazno = automatski iz scenarija</span></label>`+
     fld("pw.nonora","Od toga jezgra za ne-Oracle LPAR-ove po serveru",1,"VIOS, aplikacije… ne licenciraju se za Oracle","min=0");
 }
@@ -472,7 +474,7 @@ function renderTcoIn(){
     fld("hours","Sati rada godišnje",1,"24 × 365 = 8.760")+
     fld("rack","Cena rack U godišnje (USD)",10,"0 ako je oprema u korisnikovom DC-u");
   const row=(k,l,h)=>`<tr><td class="t">${l}</td><td class="in"><input type="number" step="any" min="0" data-k="p.${k}" id="p_${k}" value="${esc(st.p[k])}" style="min-width:110px"></td><td class="in"><input type="number" step="any" min="0" data-k="x.${k}" id="x_${k}" value="${esc(st.x[k])}" style="min-width:110px"></td><td class="hint">${h}</td></tr>`;
-  $("platBody").innerHTML=`<tr><td class="t">Broj servera</td><td id="np"></td><td id="nx"></td><td class="hint">iz koraka 5</td></tr>`+PLAT.map(r=>row(...r)).join("");
+  $("platBody").innerHTML=`<tr><td class="t">Broj servera</td><td id="np"></td><td id="nx"></td><td class="hint">EE + SE2 iz koraka 5</td></tr>`+PLAT.map(r=>row(...r)).join("");
 }
 
 function syncCores(el,list,proc,path){
@@ -494,8 +496,9 @@ function groupCalc(g){
 }
 function pwCfg(){
   const cps=coresOf(PWR,st.pw.proc,st.pw.cores);
-  const soc=Math.max(1,num(st.pw.sockets)),n=Math.max(1,Math.round(num(st.pw.servers)));
-  return {cps,soc,n,phys:cps*soc};
+  const soc=Math.max(1,num(st.pw.sockets)),ns2=Math.max(0,Math.round(num(st.pw.se2srv)));
+  const n=Math.max(ns2>0?0:1,Math.round(num(st.pw.servers)));
+  return {cps,soc,n,ns2,nTot:n+ns2,phys:cps*soc};
 }
 function powerFor(G,ratio){
   const cfg=pwCfg();
@@ -505,36 +508,50 @@ function powerFor(G,ratio){
     return {pc,pl,cost:pl*(g.se2?NET.se2:NET.ee)};
   });
   const cores=rows.reduce((a,r)=>a+r.pc,0);
+  const s2rows=cfg.ns2>0;
+  const s2Need=G.reduce((a,g,i)=>a+(g.se2&&!g.pas?rows[i].pc:0),0);
+  const eeNeed=G.reduce((a,g,i)=>a+(g.se2&&s2rows?0:rows[i].pc),0);
   const actIn=!st.indep&&String(st.pw.act).trim()!==""?num(st.pw.act):0;
   const non=Math.max(0,num(st.pw.nonora));
   let lpmRes=0;
   if(st.lpm&&cfg.n>1)rows.forEach((r,i)=>{if(!G[i].pas&&!G[i].se2)lpmRes=Math.max(lpmRes,r.pc)});
-  const perSrv=Math.max(actIn,ce(cores/cfg.n)+lpmRes+non),active=perSrv*cfg.n;
-  const oraActive=Math.max(0,perSrv-non)*cfg.n;
-  const excl=G.reduce((a,g,i)=>a+(g.se2||g.pas?rows[i].pc:0),0);
+  const nEE=Math.max(cfg.n,eeNeed>0?1:0);
+  const perSrv=nEE?Math.max(actIn,ce(eeNeed/nEE)+lpmRes+non):0,active=perSrv*nEE;
+  const oraActive=Math.max(0,perSrv-non)*nEE;
+  const excl=G.reduce((a,g,i)=>a+(g.pas||(g.se2&&!s2rows)?rows[i].pc:0),0);
   const eeLpar=rows.reduce((a,r,i)=>a+(G[i].se2?0:r.pl),0);
-  const se2L=rows.reduce((a,r,i)=>a+(G[i].se2?r.pl:0),0),se2C=rows.reduce((a,r,i)=>a+(G[i].se2?r.cost:0),0);
+  const rowS2L=rows.reduce((a,r,i)=>a+(G[i].se2?r.pl:0),0),rowS2C=rows.reduce((a,r,i)=>a+(G[i].se2?r.cost:0),0);
   const licCores=Math.max(0,oraActive-excl);
   const eeL=Math.max(eeLpar,ce(licCores*num(st.cfp)));
   const extraL=eeL-eeLpar,extraC=extraL*NET.ee;
-  return {rows,cores,perSrv,active,oraActive,licCores,non,lic:eeL+se2L,cost:eeL*NET.ee+se2C,extraL,extraC,cfg,lpmRes};
+  const s2L=s2rows?cfg.ns2*cfg.soc:rowS2L,s2C=s2rows?s2L*NET.se2:rowS2C;
+  const s2Cap=cfg.ns2*cfg.phys;
+  return {rows,cores,perSrv,active,oraActive,licCores,non,lic:eeL+s2L,cost:eeL*NET.ee+s2C,extraL,extraC,cfg,lpmRes,
+    ns2:cfg.ns2,s2L,s2C,s2Need,s2Cap,s2Fit:!s2rows||s2Cap>=s2Need,s2Extra:s2L-rowS2L,s2ExtraC:s2C-rowS2C,nTot:nEE+cfg.ns2};
 }
 function powerIndep(){
   const cfg=pwCfg(),non=Math.max(0,num(st.pw.nonora));
   const perSrv=Math.max(0,num(st.pw.act)),active=perSrv*cfg.n,oraActive=Math.max(0,perSrv-non)*cfg.n;
-  const lic=ce(oraActive*num(st.cfp));
-  return {indep:true,cfg,non,perSrv,active,oraActive,licCores:oraActive,cores:oraActive,lic,cost:lic*NET.ee,lpmRes:0,extraL:0,extraC:0,rows:[]};
+  const lic=ce(oraActive*num(st.cfp)),s2L=cfg.ns2*cfg.soc,s2C=s2L*NET.se2;
+  return {indep:true,cfg,non,perSrv,active,oraActive,licCores:oraActive,cores:oraActive,lic:lic+s2L,cost:lic*NET.ee+s2C,lpmRes:0,extraL:0,extraC:0,rows:[],
+    ns2:cfg.ns2,s2L,s2C,s2Need:0,s2Cap:cfg.ns2*cfg.phys,s2Fit:true,s2Extra:0,s2ExtraC:0,nTot:cfg.nTot};
 }
 function newX86(G){
   const cps=coresOf(X86,st.nx.proc,st.nx.cores);
-  const soc=Math.max(1,num(st.nx.sockets)),n=Math.max(1,Math.round(num(st.nx.servers)));
+  const soc=Math.max(1,num(st.nx.sockets)),ns2=Math.max(0,Math.round(num(st.nx.se2srv)));
+  const n=Math.max(ns2>0?0:1,Math.round(num(st.nx.servers)));
   const np=Math.min(n,Math.max(0,Math.round(num(st.nx.passive))));
   const act=n-np,perSrv=soc*cps,licCores=act*perSrv;
   const req=st.indep?0:G.reduce((a,g)=>a+(g.se2||g.pas?0:g.U),0);
-  const se2L=st.indep?0:G.reduce((a,g)=>a+(g.se2?g.L:0),0),se2C=st.indep?0:G.reduce((a,g)=>a+(g.se2?g.C:0),0);
+  const s2Need=st.indep?0:G.reduce((a,g)=>a+(g.se2&&!g.pas?g.U:0),0);
+  const carried=!st.indep&&ns2===0;
+  const s2L=carried?G.reduce((a,g)=>a+(g.se2?g.L:0),0):ns2*soc;
+  const s2C=carried?G.reduce((a,g)=>a+(g.se2?g.C:0),0):s2L*NET.se2;
+  const s2Cap=ns2*perSrv;
   const eeL=ce(licCores*num(st.cfx));
   const minSrv=perSrv>0?ce(req/perSrv):0;
-  return {cps,soc,n,np,act,perSrv,licCores,req,eeL,lic:eeL+se2L,cost:eeL*NET.ee+se2C,se2L,fit:perSrv>0&&licCores>=req,minSrv};
+  return {cps,soc,n,np,act,perSrv,licCores,req,eeL,lic:eeL+s2L,cost:eeL*NET.ee+s2C,se2L:s2L,s2L,s2C,ns2,s2Need,s2Cap,
+    s2Fit:carried||s2Cap>=s2Need,fit:perSrv>0&&licCores>=req,minSrv,nTot:n+ns2};
 }
 function compute(){
   NET.opt=st.opts.reduce((a,o)=>a+(o[2]?num(o[1])*(1-pct(o[3])):0),0);
@@ -561,7 +578,7 @@ function tco(M){
     const first=capex+hw+one,annual=sup+os+hyp+oth;
     return {n,licVal,capex,sup,hw,one,os,hyp,en,oth,first,annual,total:first+yrs*annual};
   };
-  const P=side("p",M.PN.cfg.n,M.PN.cost),X=side("x",M.NX.n,M.NX.cost);
+  const P=side("p",M.PN.nTot,M.PN.cost),X=side("x",M.NX.nTot,M.NX.cost);
   const years=[];let cp=0,cx=0,be=null;
   for(let y=1;y<=10;y++){const a=P.annual+(y===1?P.first:0),b=X.annual+(y===1?X.first:0);cp+=a;cx+=b;years.push({y,a,b,cp,cx});if(be===null&&cp<=cx)be=y;}
   return {yrs,P,X,years,be,sav:X.total?1-P.total/X.total:0};
@@ -583,6 +600,7 @@ function update(){
     syncCores($("g"+i+"_c"),X86,st.groups[i].proc,"groups."+i+".cores")});
   const gm=[];
   M.G.forEach(g=>{if(g.missing)gm.push(["bad",`Grupa „${g.name}“: nedostaje broj jezgara po soketu (izabran je „Drugo“).`]);
+    if(g.se2&&g.role==="DR (Data Guard)")gm.push(["bad",`Grupa „${g.name}“: uloga „DR (Data Guard)“ i Standard Edition 2 ne idu zajedno. Data Guard postoji samo u Enterprise Edition-u, a standby mora imati istu ediciju i opcije kao produkcija.`]);
     if(g.se2&&g.soc>2)gm.push(["bad",`Grupa „${g.name}“: SE2 je dozvoljen samo na serverima sa najviše 2 soketa.`]);});
   if(M.G.some(g=>g.se2))gm.push(["info","SE2 se licencira po soketu. Za SE2 grupe licence su prikazane iste na svim platformama."]);
   if(M.G.some(g=>g.pas))gm.push(["info","Pasivni failover: prikazan bez licenci (pravilo 10 dana godišnje). Ako se koristi više od toga, promenite ulogu u „Aktivno“."]);
@@ -600,15 +618,16 @@ function update(){
   // 4
   const rows=M.G.map((g,i)=>{const p=M.P.rows[i],d=g.C-p.cost;return `<tr><td class="t">${esc(g.name||"—")}</td><td class="t">${esc(g.role)}</td><td>${fN(g.K)}</td><td>${fN(g.U)}</td><td>${fN(g.L)}</td><td>${fU(g.C)}</td><td>${fN(p.pc)}</td><td>${fN(p.pl)}</td><td>${fU(p.cost)}</td><td class="${cls(d)}">${fU(d)}</td></tr>`}).join("");
   const extra=M.P.extraL>0?`<tr class="extra"><td class="t" colspan="7">Dodatno: licenciraju se sva aktivna Oracle jezgra Power servera (zaokruživanje po serveru, ručno aktivirana jezgra${st.lpm?", LPM rezerva":""})</td><td>${fN(M.P.extraL)}</td><td>${fU(M.P.extraC)}</td><td>${fU(-M.P.extraC)}</td></tr>`:"";
+  const extra2=M.P.s2Extra?`<tr class="extra"><td class="t" colspan="7">${`SE2: licencira se po soketu Power SE2 servera iz koraka 5`}</td><td>${fN(M.P.s2Extra)}</td><td>${fU(M.P.s2ExtraC)}</td><td>${fU(-M.P.s2ExtraC)}</td></tr>`:"";
   const dT=M.X.C-M.P.cost,svL=M.X.C?1-M.P.cost/M.X.C:0,supX=M.X.C*num(st.sup)/100,supP=M.P.cost*num(st.sup)/100;
-  $("cmpBody").innerHTML=rows+extra+`<tr class="tot"><td class="t">Ukupno</td><td class="t">ušteda ${fP(svL)}</td><td>${fN(M.X.K)}</td><td>${fN(M.X.U)}</td><td>${fN(M.X.L)}</td><td>${fU(M.X.C)}</td><td>${fN(M.P.cores)}</td><td>${fN(M.P.lic)}</td><td>${fU(M.P.cost)}</td><td class="${cls(dT)}">${fU(dT)}</td></tr>`+
+  $("cmpBody").innerHTML=rows+extra+extra2+`<tr class="tot"><td class="t">Ukupno</td><td class="t">ušteda ${fP(svL)}</td><td>${fN(M.X.K)}</td><td>${fN(M.X.U)}</td><td>${fN(M.X.L)}</td><td>${fU(M.X.C)}</td><td>${fN(M.P.cores)}</td><td>${fN(M.P.lic)}</td><td>${fU(M.P.cost)}</td><td class="${cls(dT)}">${fU(dT)}</td></tr>`+
     `<tr><td class="t" colspan="5">Godišnji Oracle support</td><td>${fU(supX)}</td><td colspan="2"></td><td>${fU(supP)}</td><td class="${cls(supX-supP)}">${fU(supX-supP)}</td></tr>`;
   const cm=[];
   if(M.ratio<=num(st.cfp)/Math.max(0.01,num(st.cfx)))cm.push(["warn",`Izabrani odnos (${fR(M.ratio)}) je na pragu rentabilnosti ili ispod njega. Po jezgru Power nije jeftiniji; ušteda dolazi samo od manjeg broja korišćenih jezgara.`]);
   if(st.lpm)cm.push(["info",`LPM je uključen: svaki Power server drži slobodna aktivna jezgra za prijem najvećeg LPAR-a (${fN(M.P.lpmRes)} jezgara), a licence pokrivaju sva aktivna jezgra svih Power servera. Proveriti sa Oracle-om.`]);
   msgs("cmpMsgs",cm);
   // 5
-  const NX=M.NX,PN=M.PN,cfg=PN.cfg,pfit=cfg.phys>0&&PN.perSrv<=cfg.phys&&(!st.indep||PN.perSrv>0),ind=!!st.indep;
+  const NX=M.NX,PN=M.PN,cfg=PN.cfg,pfit=cfg.phys>0&&PN.perSrv<=cfg.phys&&(!st.indep||PN.perSrv>0||cfg.n===0),ind=!!st.indep;
   $("indep").checked=ind;
   S("zoneText",ind?"Nezavisno poređenje: porede se samo nova x86 i nova Power konfiguracija unete u koraku 5. Koraci 2–4 i izabrani scenario ne utiču na ovaj deo.":"Od ovog koraka poredi se potpuno novo x86 okruženje sa novim IBM Power okruženjem: novi serveri, nove licence i TCO. Oba se dimenzionišu prema trenutnom okruženju (korak 2) i izabranom scenariju (korak 3).");
   S("modeText",ind?"Uključeno: x86 licence = sva jezgra aktivnih servera × core factor; Power licence = aktivna Oracle jezgra po serveru × broj servera × core factor. Polje „Aktivna jezgra po serveru“ je obavezno. Cene i popusti i dalje dolaze iz koraka 1.":"Isključeno: novo okruženje prati trenutno. Potrebna jezgra dolaze iz koraka 2 (korišćena jezgra) i izabranog scenarija u koraku 3; kalkulator proverava da li konfiguracije imaju dovoljno kapaciteta.");
@@ -616,8 +635,10 @@ function update(){
   const pa=$("pw_act");if(pa)pa.placeholder=ind?"unesite":"auto";
   syncCores($("nx_cores"),X86,st.nx.proc,"nx.cores");syncCores($("pw_cores"),PWR,st.pw.proc,"pw.cores");
   $("nxOut").innerHTML=(ind?"":`<div><span>Potrebna jezgra:</span> <b>${fN(NX.req)}</b></div>`)+`<div><span>Jezgra po serveru:</span> <b>${fN(NX.perSrv)}</b></div><div><span>Licencirana jezgra (aktivni serveri):</span> <b>${fN(NX.licCores)}</b></div><div><span>Oracle licence:</span> <b>${fN(NX.lic)}</b></div>`+(ind?"":`<div><span>Kapacitet:</span> <span class="pill ${NX.fit?"ok":"no"}">${NX.fit?"dovoljan":"nedovoljan"}</span></div>`);
+  if(NX.ns2>0)$("nxOut").innerHTML+=`<div><span>SE2 serveri:</span> <b>${fN(NX.ns2)}</b> · licence <b>${fN(NX.s2L)}</b> (po soketu)</div>`;
   const sug=M.ratio>0?ce(NX.licCores/M.ratio):0;
   $("pwOut").innerHTML=(ind?`<div><span>Procena po scenariju (${fR(M.ratio)}):</span> <b>${fN(sug)}</b> jezgara za ovaj x86</div>`:`<div><span>Potrebna jezgra (scenario):</span> <b>${fN(PN.cores)}</b></div>`)+`<div><span>Aktivna jezgra po serveru:</span> <b>${fN(PN.perSrv)}</b> od ${fN(cfg.phys)}</div><div><span>Ukupno aktivnih jezgara:</span> <b>${fN(PN.active)}</b></div><div><span>Licencirana Oracle jezgra:</span> <b>${fN(PN.licCores)}</b></div><div><span>Oracle licence:</span> <b>${fN(PN.lic)}</b></div><div><span>Kapacitet:</span> <span class="pill ${pfit?"ok":"no"}">${pfit?"dovoljan":"nedovoljan"}</span></div>`;
+  if(PN.ns2>0)$("pwOut").innerHTML+=`<div><span>SE2 serveri:</span> <b>${fN(PN.ns2)}</b> · licence <b>${fN(PN.s2L)}</b> (po soketu)</div>`;
   const fm=[];
   if(NX.perSrv===0)fm.push(["bad","x86: unesite broj jezgara po soketu."]);
   else if(!ind&&!NX.fit)fm.push(["bad",`x86: aktivni serveri imaju ${fN(NX.licCores)} jezgara, a potrebno je ${fN(NX.req)}. Potrebno je najmanje ${fN(NX.minSrv)} aktivnih servera ili jači procesor.`]);
@@ -628,10 +649,14 @@ function update(){
     else if(PN.perSrv>cfg.phys)fm.push(["bad",`Power: uneto je ${fN(PN.perSrv)} aktivnih jezgara po serveru, a server ima ${fN(cfg.phys)} fizičkih.`]);
     fm.push(["info","Nezavisno poređenje: SE2 grupe i pasivni serveri iz koraka 2 se ne prenose; obe strane se računaju kao Enterprise Edition. Ako je u koraku 1 izabrano „Korisnik već ima x86 licence“, vrednost postojećih licenci se i dalje uzima iz koraka 2."]);
   }else{
-    if(String(st.pw.act).trim()!==""&&num(st.pw.act)<ce(PN.cores/cfg.n)+PN.lpmRes+PN.non)fm.push(["warn",`Power: uneta aktivna jezgra po serveru (${fN(num(st.pw.act))}) su manja od potrebnih (${fN(ce(PN.cores/cfg.n)+PN.lpmRes+PN.non)}); kalkulator koristi potreban broj.`]);
+    if(String(st.pw.act).trim()!==""&&num(st.pw.act)<ce(PN.cores/Math.max(1,cfg.n))+PN.lpmRes+PN.non)fm.push(["warn",`Power: uneta aktivna jezgra po serveru (${fN(num(st.pw.act))}) su manja od potrebnih (${fN(ce(PN.cores/Math.max(1,cfg.n))+PN.lpmRes+PN.non)}); kalkulator koristi potreban broj.`]);
     else if(!pfit)fm.push(["bad",`Power: potrebno je ${fN(PN.perSrv)} aktivnih jezgara po serveru, a server ima ${fN(cfg.phys)}. Dodajte server, soket ili izaberite procesor sa više jezgara.`]);
   }
-  if(NX.n&&cfg.n&&(ind||NX.fit)&&pfit)fm.push(["info",`Broj servera: ${fN(NX.n)} novih x86 naspram ${fN(cfg.n)} Power servera, odnosno ≈ ${(NX.n/cfg.n).toFixed(1).replace(".",",")} x86 servera po jednom Power serveru. Računa se iz broja servera unetih iznad.`]);
+  if(NX.nTot&&PN.nTot&&(ind||NX.fit)&&pfit)fm.push(["info",`Broj servera: ${fN(NX.nTot)} novih x86 naspram ${fN(PN.nTot)} Power servera, odnosno ≈ ${(NX.nTot/PN.nTot).toFixed(1).replace(".",",")} x86 servera po jednom Power serveru. Računa se iz broja servera unetih iznad.`]);
+  if((NX.ns2>0&&NX.soc>2)||(PN.ns2>0&&cfg.soc>2))fm.push(["bad","SE2: Standard Edition 2 je dozvoljen samo na serverima sa najviše 2 soketa. Smanjite broj soketa ili koristite Enterprise Edition."]);
+  if(!NX.s2Fit)fm.push(["bad",`x86 SE2: serveri imaju ${fN(NX.s2Cap)} jezgara, a SE2 grupe iz koraka 2 trebaju ${fN(NX.s2Need)}.`]);
+  if(!PN.s2Fit)fm.push(["bad",`Power SE2: serveri imaju ${fN(PN.s2Cap)} jezgara, a SE2 grupe trebaju ${fN(PN.s2Need)}.`]);
+  if(!ind&&M.G.some(g=>g.se2&&!g.pas)&&(NX.ns2===0||PN.ns2===0))fm.push(["info","U koraku 2 postoje SE2 grupe, a u koraku 5 nema SE2 servera. Njihove licence se prenose iz koraka 2 (po soketu); unesite broj SE2 servera da bi se računali i hardver i kapacitet."]);
   msgs("cfgMsgs",fm);
   // 6
   S("np",fN(T.P.n));S("nx",fN(T.X.n));
@@ -662,7 +687,7 @@ function update(){
   if(ind&&PN.perSrv===0){$("kpiB").innerHTML=kpi("Novo x86 licence",fN(NX.lic),fU(NX.cost),"x")+kpi("Novi Power licence","–","unesite aktivna jezgra (korak 5)","p")+kpi("Ušteda licenci","–","","")+kpi(`TCO ${T.yrs} god. x86`,fU(T.X.total),"","x")+kpi(`TCO ${T.yrs} god. Power`,"–","","p")+kpi("Ušteda TCO","–","","");}
   else $("kpiB").innerHTML=kpi("Novo x86 licence",fN(NX.lic),fU(NX.cost),"x")+kpi("Novi Power licence",fN(PN.lic),fU(PN.cost),"p")+kpi("Ušteda licenci",NX.cost?fP(svN):"–",fU(NX.cost-PN.cost),"",cls(svN))+
     kpi(`TCO ${T.yrs} god. x86`,fU(T.X.total),"","x")+kpi(`TCO ${T.yrs} god. Power`,fU(T.P.total),"","p")+kpi("Ušteda TCO",fP(T.sav),fU(T.X.total-T.P.total),"",cls(T.sav));
-  $("scenline").innerHTML=`Scenario (korak 3): <strong>${esc(st.scen[st.sel].n)}</strong> · odnos ${fR(M.ratio)} · ${ind?"<strong>novo okruženje nezavisno od trenutnog</strong> · ":""}novi Power ${fN(PN.active)} aktivnih jezgara na ${fN(cfg.n)} servera · novo x86 ${fN(NX.n)} servera${st.lpm?" · LPM uključen":""}${post?" · postojeće licence":""}`;
+  $("scenline").innerHTML=`Scenario (korak 3): <strong>${esc(st.scen[st.sel].n)}</strong> · odnos ${fR(M.ratio)} · ${ind?"<strong>novo okruženje nezavisno od trenutnog</strong> · ":""}novi Power ${fN(PN.active)} aktivnih jezgara na ${fN(PN.nTot)} servera · novo x86 ${fN(NX.nTot)} servera${st.lpm?" · LPM uključen":""}${post?" · postojeće licence":""}`;
 }
 function drawChart(T){
   const ys=T.years.slice(0,Math.max(2,T.yrs));
